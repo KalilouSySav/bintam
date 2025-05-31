@@ -1,0 +1,8 @@
+{
+  "projects": {
+    "bintam": "bintam-40b1d",
+    "default": "bintam-40b1d"
+  },
+  "targets": {},
+  "etags": {}
+}

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "627572078452",
+    "project_id": "bintam-40b1d",
+    "storage_bucket": "bintam-40b1d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:627572078452:android:7ef94436e2c8c109711e21",
+        "android_client_info": {
+          "package_name": "com.example.bintam"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB7WefImb7QSMmbtKsmSFM79r2RtfKipz8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
