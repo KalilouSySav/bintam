@@ -273,18 +273,23 @@ class _CatalogueViewState extends State<CatalogueView> {
 
                 return LayoutBuilder(
                   builder: (context, constraints) {
-                    int crossAxisCount = constraints.maxWidth > 1200
-                        ? 4
-                        : constraints.maxWidth > 800
-                        ? 3
-                        : 2;
+                    double width = constraints.maxWidth;
+
+                    int crossAxisCount = width < 600
+                        ? 1 // Mobile view
+                        : width < 900
+                        ? 2 // Tablet
+                        : width < 1200
+                        ? 3 // Small desktop
+                        : 4; // Large screen
+
                     return GridView.builder(
-                      padding: const EdgeInsets.all(16),
+                      padding: EdgeInsets.all(isDesktop ? 24 : 4),
                       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: crossAxisCount,
-                        childAspectRatio: 0.8,
-                        crossAxisSpacing: 16,
-                        mainAxisSpacing: 16,
+                        childAspectRatio: isDesktop ? 0.7 : 0.8,
+                        crossAxisSpacing: isDesktop ? 16 : 8,
+                        mainAxisSpacing: isDesktop ? 16 : 8,
                       ),
                       itemCount: controller.products.length,
                       itemBuilder: (BuildContext context, int index) {

@@ -71,7 +71,7 @@ class _ProductCardState extends State<ProductCard> {
                         secondaryImages: widget.product.imagesSecondaires,
                         heroTag: 'product_${widget.product.id}',
                         iconSize: iconSize,
-                        paddingValue: paddingValue,
+                        paddingValue: paddingValue + 2,
                       ),
 
                       // Badge écologique
