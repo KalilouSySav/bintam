@@ -38,4 +38,32 @@ class ProductDao extends BaseDao<ProductModel> {
       throw Exception('Erreur lors de la recherche: $e');
     }
   }
+
+  Future<List<ProductModel>> getProductsSortedByName(bool ascending) async {
+    try {
+      final querySnapshot = await collection
+          .orderBy('nom', descending: !ascending)
+          .get();
+
+      return querySnapshot.docs
+          .map((doc) => fromMap(doc.data() as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      throw Exception('Erreur lors du tri par nom: $e');
+    }
+  }
+
+  Future<List<ProductModel>> getProductsSortedByPrice(bool ascending) async {
+    try {
+      final querySnapshot = await collection
+          .orderBy('prix', descending: !ascending)
+          .get();
+
+      return querySnapshot.docs
+          .map((doc) => fromMap(doc.data() as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      throw Exception('Erreur lors du tri par prix: $e');
+    }
+  }
 }

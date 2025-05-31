@@ -1,6 +1,6 @@
-import 'package:bintam/utils/pick_image_as_base64_string.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:bintam/utils/pick_image_as_base64_string.dart';
 
 import '../controllers/product_controller.dart';
 import '../models/product_model.dart';
@@ -26,6 +26,7 @@ class _ProductDialogState extends State<ProductDialog> {
   bool _isPickingFile = false;
 
   String? _imagePath;
+  List<String> _secondaryImagePaths = [];
 
   @override
   void initState() {
@@ -38,6 +39,7 @@ class _ProductDialogState extends State<ProductDialog> {
       _stockController.text = widget.product!.stock.toString();
       _estEcologique = widget.product!.estEcologique;
       _imagePath = widget.product!.imageUrl;
+      _secondaryImagePaths = widget.product!.imagesSecondaires;
     }
   }
 
@@ -146,7 +148,6 @@ class _ProductDialogState extends State<ProductDialog> {
                   },
                 ),
                 const SizedBox(height: 16),
-                // Section image améliorée
                 Card(
                   elevation: 2,
                   child: Padding(
@@ -155,7 +156,7 @@ class _ProductDialogState extends State<ProductDialog> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text(
-                          'Image du produit',
+                          'Image principale',
                           style: TextStyle(fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 8),
@@ -174,7 +175,7 @@ class _ProductDialogState extends State<ProductDialog> {
                                 const SizedBox(width: 8),
                                 Expanded(
                                   child: Text(
-                                    'Image sélectionnée: ${_imagePath!.split('/').last}',
+                                    'Image sélectionnée',
                                     style: const TextStyle(fontSize: 12),
                                     overflow: TextOverflow.ellipsis,
                                   ),
@@ -239,6 +240,103 @@ class _ProductDialogState extends State<ProductDialog> {
                   ),
                 ),
                 const SizedBox(height: 16),
+                Card(
+                  elevation: 2,
+                  child: Padding(
+                    padding: const EdgeInsets.all(12.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Images secondaires',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 8),
+                        if (_secondaryImagePaths.isNotEmpty) ...[
+                          Column(
+                            children: _secondaryImagePaths.map((imagePath) {
+                              return Container(
+                                margin: const EdgeInsets.only(bottom: 8),
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: Colors.green.shade50,
+                                  borderRadius: BorderRadius.circular(4),
+                                  border: Border.all(color: Colors.green.shade200),
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.check_circle,
+                                        color: Colors.green, size: 16),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        'Image sélectionnée',
+                                        style: const TextStyle(fontSize: 12),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    TextButton(
+                                      onPressed: () {
+                                        setState(() {
+                                          _secondaryImagePaths.remove(imagePath);
+                                        });
+                                      },
+                                      child: const Text('Supprimer'),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        ] else ...[
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade100,
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(color: Colors.grey.shade300),
+                            ),
+                            child: const Row(
+                              children: [
+                                Icon(Icons.info_outline,
+                                    color: Colors.grey, size: 16),
+                                SizedBox(width: 8),
+                                Text(
+                                  'Aucune image secondaire sélectionnée',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 8),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            icon: _isPickingFile
+                                ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                                : const Icon(Icons.upload_file),
+                            label: Text(_isPickingFile
+                                ? 'Sélection en cours...'
+                                : 'Ajouter des images secondaires'),
+                            onPressed: _isPickingFile ? null : _pickSecondaryImages,
+                            style: ElevatedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
                 CheckboxListTile(
                   title: const Text('Produit écologique'),
                   subtitle: const Text('Ce produit respecte l\'environnement'),
@@ -281,20 +379,18 @@ class _ProductDialogState extends State<ProductDialog> {
     );
   }
 
-  /// Gère la sélection d'image avec feedback utilisateur
   Future<void> _pickImage() async {
     setState(() {
       _isPickingFile = true;
     });
 
     try {
-      final path = await pickImageAsBase64String(); // Pour tous types de fichiers
+      final path = await pickImageAsBase64String();
       if (mounted) {
         setState(() {
           _isPickingFile = false;
           if (path != null) {
             _imagePath = path;
-            // Feedback positif
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
                 content: Text('Image sélectionnée avec succès!'),
@@ -321,7 +417,44 @@ class _ProductDialogState extends State<ProductDialog> {
     }
   }
 
-  /// Soumet le formulaire avec validation améliorée
+  Future<void> _pickSecondaryImages() async {
+    setState(() {
+      _isPickingFile = true;
+    });
+
+    try {
+      final paths = await pickImagesAsBase64Strings();
+      if (mounted) {
+        setState(() {
+          _isPickingFile = false;
+          if (paths != null) {
+            _secondaryImagePaths.addAll(paths);
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Images secondaires sélectionnées avec succès!'),
+                backgroundColor: Colors.green,
+                duration: Duration(seconds: 2),
+              ),
+            );
+          }
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isPickingFile = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur lors de la sélection des images: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
+  }
+
   void _submitForm() async {
     if (!_formKey.currentState!.validate()) {
       return;
@@ -338,6 +471,7 @@ class _ProductDialogState extends State<ProductDialog> {
         description: _descriptionController.text.trim(),
         prix: double.parse(_prixController.text.trim()),
         imageUrl: _imagePath ?? '',
+        imagesSecondaires: _secondaryImagePaths,
         categorie: _categorieController.text.trim(),
         stock: int.parse(_stockController.text.trim()),
         estEcologique: _estEcologique,

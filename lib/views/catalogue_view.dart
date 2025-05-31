@@ -17,6 +17,8 @@ class CatalogueView extends StatefulWidget {
 }
 
 class _CatalogueViewState extends State<CatalogueView> {
+  String _selectedSortOption = 'default';
+
   @override
   void initState() {
     super.initState();
@@ -33,11 +35,10 @@ class _CatalogueViewState extends State<CatalogueView> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.white,
-        elevation: isDesktop ? 2 : 1,
+        elevation: isDesktop ? 4 : 2,
         title: isDesktop
             ? Row(
           children: [
-            // Logo
             Image.asset(
               'images/logo-bintam-1.png',
               height: 40,
@@ -52,8 +53,6 @@ class _CatalogueViewState extends State<CatalogueView> {
               ),
             ),
             const SizedBox(width: 16),
-
-            // Navigation boutons à gauche
             NavButton(label: 'Accueil', route: '/'),
             NavButton(label: 'Catalogue', route: '/catalogue'),
             NavButton(label: 'Contact', route: '/contact'),
@@ -61,17 +60,15 @@ class _CatalogueViewState extends State<CatalogueView> {
         )
             : const Text('Catalogue'),
         actions: [
-          // Icône panier
           Consumer<CartController>(
             builder: (context, cart, child) {
               return IconButton(
                 icon: Stack(
                   children: [
-                    const Icon(Icons.shopping_cart),
+                    const Icon(Icons.shopping_cart, color: Colors.black),
                     if (cart.itemCount > 0)
                       Positioned(
                         right: 0,
-                        top: 0,
                         child: Container(
                           padding: const EdgeInsets.all(2),
                           decoration: BoxDecoration(
@@ -98,11 +95,10 @@ class _CatalogueViewState extends State<CatalogueView> {
               );
             },
           ),
-
-          // Menu utilisateur
           Consumer<AuthController>(
             builder: (context, auth, child) {
               return PopupMenuButton<String>(
+                icon: const Icon(Icons.person, color: Colors.black),
                 onSelected: (value) {
                   switch (value) {
                     case 'auth':
@@ -159,15 +155,20 @@ class _CatalogueViewState extends State<CatalogueView> {
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(16.0),
             child: Row(
               children: [
                 Expanded(
                   child: TextField(
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       hintText: 'Rechercher un produit',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.search),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                      filled: true,
+                      fillColor: Colors.grey[200],
+                      prefixIcon: const Icon(Icons.search, color: Colors.grey),
                     ),
                     onChanged: (value) {
                       context.read<ProductController>().searchProducts(value);
@@ -177,26 +178,82 @@ class _CatalogueViewState extends State<CatalogueView> {
                 const SizedBox(width: 16),
                 Consumer<ProductController>(
                   builder: (context, controller, child) {
-                    return DropdownButton<String>(
-                      value: controller.selectedCategory.isEmpty
-                          ? null
-                          : controller.selectedCategory,
-                      hint: const Text('Catégorie'),
-                      items: const [
-                        DropdownMenuItem(value: '', child: Text('Toutes')),
-                        DropdownMenuItem(
-                            value: 'alimentation', child: Text('Alimentation')),
-                        DropdownMenuItem(
-                            value: 'automobile', child: Text('Automobile')),
-                        DropdownMenuItem(
-                            value: 'maison', child: Text('Maison')),
-                        DropdownMenuItem(value: 'mode', child: Text('Mode')),
-                      ],
-                      onChanged: (value) {
-                        controller.filterByCategory(value ?? '');
-                      },
+                    return Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[200],
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: DropdownButton<String>(
+                        value: controller.selectedCategory.isEmpty
+                            ? null
+                            : controller.selectedCategory,
+                        hint: const Text('Catégorie'),
+                        underline: const SizedBox(),
+                        icon: const Icon(Icons.arrow_drop_down, color: Colors.grey),
+                        items: const [
+                          DropdownMenuItem(value: '', child: Text('Toutes')),
+                          DropdownMenuItem(
+                              value: 'alimentation', child: Text('Alimentation')),
+                          DropdownMenuItem(
+                              value: 'automobile', child: Text('Automobile')),
+                          DropdownMenuItem(
+                              value: 'maison', child: Text('Maison')),
+                          DropdownMenuItem(value: 'mode', child: Text('Mode')),
+                        ],
+                        onChanged: (value) {
+                          controller.filterByCategory(value ?? '');
+                        },
+                      ),
                     );
                   },
+                ),
+                const SizedBox(width: 16),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[200],
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: DropdownButton<String>(
+                    value: _selectedSortOption,
+                    hint: const Text('Trier par'),
+                    underline: const SizedBox(),
+                    icon: const Icon(Icons.sort, color: Colors.grey),
+                    items: const [
+                      DropdownMenuItem(
+                          value: 'default', child: Text('Par défaut')),
+                      DropdownMenuItem(
+                          value: 'name_asc', child: Text('Nom A-Z')),
+                      DropdownMenuItem(
+                          value: 'name_desc', child: Text('Nom Z-A')),
+                      DropdownMenuItem(
+                          value: 'price_asc', child: Text('Prix croissant')),
+                      DropdownMenuItem(
+                          value: 'price_desc', child: Text('Prix décroissant')),
+                    ],
+                    onChanged: (value) {
+                      setState(() {
+                        _selectedSortOption = value!;
+                      });
+                      switch (value) {
+                        case 'name_asc':
+                          context.read<ProductController>().sortProductsByName(ascending: true);
+                          break;
+                        case 'name_desc':
+                          context.read<ProductController>().sortProductsByName(ascending: false);
+                          break;
+                        case 'price_asc':
+                          context.read<ProductController>().sortProductsByPrice(ascending: true);
+                          break;
+                        case 'price_desc':
+                          context.read<ProductController>().sortProductsByPrice(ascending: false);
+                          break;
+                        default:
+                          context.read<ProductController>().loadProducts();
+                      }
+                    },
+                  ),
                 ),
               ],
             ),

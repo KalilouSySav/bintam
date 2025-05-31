@@ -8,6 +8,7 @@ class ProductModel {
   final int stock;
   final bool estEcologique;
   final DateTime dateAjout;
+  final List<String> imagesSecondaires; // Nouveau champ
 
   ProductModel({
     required this.id,
@@ -19,6 +20,7 @@ class ProductModel {
     required this.stock,
     required this.estEcologique,
     required this.dateAjout,
+    required this.imagesSecondaires, // Ajout du nouveau champ
   });
 
   factory ProductModel.fromMap(Map<String, dynamic> map) {
@@ -32,6 +34,7 @@ class ProductModel {
       stock: map['stock'] ?? 0,
       estEcologique: map['estEcologique'] ?? false,
       dateAjout: DateTime.parse(map['dateAjout']),
+      imagesSecondaires: List<String>.from(map['imagesSecondaires'] ?? []), // Ajout du nouveau champ
     );
   }
 
@@ -46,6 +49,7 @@ class ProductModel {
       'stock': stock,
       'estEcologique': estEcologique,
       'dateAjout': dateAjout.toIso8601String(),
+      'imagesSecondaires': imagesSecondaires, // Ajout du nouveau champ
     };
   }
 }

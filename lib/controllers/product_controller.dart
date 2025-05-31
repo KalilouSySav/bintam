@@ -44,6 +44,40 @@ class ProductController extends ChangeNotifier {
     _applyFilters();
   }
 
+  Future<void> sortProductsByName({bool ascending = true}) async {
+    try {
+      _isLoading = true;
+      notifyListeners();
+
+      _products = await _productDao.getProductsSortedByName(ascending);
+      _filteredProducts = List.from(_products);
+
+      _isLoading = false;
+      notifyListeners();
+    } catch (e) {
+      _isLoading = false;
+      notifyListeners();
+      throw Exception('Erreur lors du tri des produits par nom: $e');
+    }
+  }
+
+  Future<void> sortProductsByPrice({bool ascending = true}) async {
+    try {
+      _isLoading = true;
+      notifyListeners();
+
+      _products = await _productDao.getProductsSortedByPrice(ascending);
+      _filteredProducts = List.from(_products);
+
+      _isLoading = false;
+      notifyListeners();
+    } catch (e) {
+      _isLoading = false;
+      notifyListeners();
+      throw Exception('Erreur lors du tri des produits par prix: $e');
+    }
+  }
+
   void _applyFilters() {
     _filteredProducts = _products.where((product) {
       final matchesSearch = _searchTerm.isEmpty ||
