@@ -298,15 +298,15 @@ class _AdminUsersTabState extends State<AdminUsersTab>
               ],
             ),
           ),
-          IconButton(
-            onPressed: _loadUsers,
-            icon: const Icon(Icons.refresh_rounded),
-            style: IconButton.styleFrom(
-              backgroundColor: Colors.grey.shade100,
-              foregroundColor: Colors.grey.shade700,
-            ),
-            tooltip: 'Actualiser',
-          ),
+          // IconButton(
+          //   onPressed: _loadUsers,
+          //   icon: const Icon(Icons.refresh_rounded),
+          //   style: IconButton.styleFrom(
+          //     backgroundColor: Colors.grey.shade100,
+          //     foregroundColor: Colors.grey.shade700,
+          //   ),
+          //   tooltip: 'Actualiser',
+          // ),
         ],
       ),
     );

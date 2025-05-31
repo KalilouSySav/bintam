@@ -168,6 +168,7 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
               Consumer<AuthController>(
                 builder: (context, auth, child) {
                   return PopupMenuButton<String>(
+                    icon: const Icon(Icons.person, color: Colors.white),
                     onSelected: (value) {
                       switch (value) {
                         case 'auth':

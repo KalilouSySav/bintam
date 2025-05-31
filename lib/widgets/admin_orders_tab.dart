@@ -384,15 +384,15 @@ class _AdminOrdersTabState extends State<AdminOrdersTab> with TickerProviderStat
               ],
             ),
           ),
-          IconButton(
-            onPressed: () => _orderController.loadOrders(),
-            icon: const Icon(Icons.refresh_rounded),
-            style: IconButton.styleFrom(
-              backgroundColor: Colors.grey.shade100,
-              foregroundColor: Colors.grey.shade700,
-            ),
-            tooltip: 'Actualiser',
-          ),
+          // IconButton(
+          //   onPressed: () => _orderController.loadOrders(),
+          //   icon: const Icon(Icons.refresh_rounded),
+          //   style: IconButton.styleFrom(
+          //     backgroundColor: Colors.grey.shade100,
+          //     foregroundColor: Colors.grey.shade700,
+          //   ),
+          //   tooltip: 'Actualiser',
+          // ),
         ],
       ),
     );

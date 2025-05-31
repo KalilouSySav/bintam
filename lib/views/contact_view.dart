@@ -98,6 +98,7 @@ class _ContactViewState extends State<ContactView> {
           Consumer<AuthController>(
             builder: (context, auth, child) {
               return PopupMenuButton<String>(
+                icon: const Icon(Icons.person, color: Colors.black),
                 onSelected: (value) {
                   switch (value) {
                     case 'auth':
