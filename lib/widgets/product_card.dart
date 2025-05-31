@@ -209,7 +209,7 @@ class _ProductCardState extends State<ProductCard> {
                               : null,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: widget.product.stock > 0
-                                ? theme.primaryColor
+                                ? Colors.black
                                 : Colors.grey[400],
                             foregroundColor: Colors.white,
                             elevation: 2,

@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -16,89 +15,30 @@ class CartItemWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final Uint8List imageBytes = base64Decode(item.imageUrl);
+
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       child: Padding(
         padding: const EdgeInsets.all(16),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                color: Colors.grey[200],
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: item.imageUrl.isNotEmpty
-                  ? Image.memory(
-                imageBytes,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return const Icon(Icons.image);
-                },
-              )
-                  : const Icon(Icons.image),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    item.nom,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '${item.prix.toStringAsFixed(2)} \$ / unité',
-                    style: TextStyle(
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Row(
+            Row( // Image + Nom + Prix
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                IconButton(
-                  onPressed: () {
-                    context.read<CartController>().updateQuantity(
-                      item.id,
-                      item.quantite - 1,
-                    );
-                  },
-                  icon: const Icon(Icons.remove),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text('${item.quantite}'),
-                ),
-                IconButton(
-                  onPressed: () {
-                    context.read<CartController>().updateQuantity(
-                      item.id,
-                      item.quantite + 1,
-                    );
-                  },
-                  icon: const Icon(Icons.add),
-                ),
+                _buildImage(imageBytes),
+                const SizedBox(width: 12),
+                Expanded(child: _buildTitleAndPrice()),
               ],
             ),
-            const SizedBox(width: 16),
-            Column(
+            const SizedBox(height: 12),
+            _buildQuantitySelector(context),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  '${item.sousTotal.toStringAsFixed(2)} \$',
+                  'Prix: ${item.sousTotal.toStringAsFixed(2)} \$',
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
@@ -115,6 +55,77 @@ class CartItemWidget extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildImage(Uint8List imageBytes) {
+    return Container(
+      width: 80,
+      height: 80,
+      decoration: BoxDecoration(
+        color: Colors.grey[200],
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: item.imageUrl.isNotEmpty
+          ? Image.memory(
+        imageBytes,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          return const Icon(Icons.image);
+        },
+      )
+          : const Icon(Icons.image),
+    );
+  }
+
+  Widget _buildTitleAndPrice() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          item.nom,
+          style: const TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: 16,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          '${item.prix.toStringAsFixed(2)} \$ / unité',
+          style: TextStyle(
+            color: Colors.grey[700],
+            fontSize: 14,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildQuantitySelector(BuildContext context) {
+    return Row(
+      children: [
+        const Text(
+          "Quantité :",
+          style: TextStyle(fontWeight: FontWeight.w500),
+        ),
+        const SizedBox(width: 12),
+        IconButton(
+          onPressed: () {
+            context.read<CartController>().updateQuantity(item.id, item.quantite - 1);
+          },
+          icon: const Icon(Icons.remove_circle_outline),
+        ),
+        Text(
+          '${item.quantite}',
+          style: const TextStyle(fontSize: 16),
+        ),
+        IconButton(
+          onPressed: () {
+            context.read<CartController>().updateQuantity(item.id, item.quantite + 1);
+          },
+          icon: const Icon(Icons.add_circle_outline),
+        ),
+      ],
     );
   }
 }

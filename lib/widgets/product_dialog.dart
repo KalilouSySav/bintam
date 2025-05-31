@@ -361,7 +361,7 @@ class _ProductDialogState extends State<ProductDialog> {
         ElevatedButton(
           onPressed: _isLoading ? null : _submitForm,
           style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.purple,
+            backgroundColor: Colors.indigo,
             foregroundColor: Colors.white,
           ),
           child: _isLoading

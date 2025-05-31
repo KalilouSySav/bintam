@@ -40,7 +40,11 @@ class _AdminProductsTabState extends State<AdminProductsTab>
   }
 
   @override
+  @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isDesktop = screenWidth >= 1024;
+
     return Consumer<ProductController>(
       builder: (context, controller, child) {
         if (controller.isLoading) {
@@ -49,10 +53,7 @@ class _AdminProductsTabState extends State<AdminProductsTab>
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [
-                  Colors.blue.shade50,
-                  Colors.indigo.shade50,
-                ],
+                colors: [Colors.blue.shade50, Colors.indigo.shade50],
               ),
             ),
             child: const Center(
@@ -78,52 +79,64 @@ class _AdminProductsTabState extends State<AdminProductsTab>
           );
         }
 
-        return Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                Colors.blue.shade50,
-                Colors.indigo.shade50,
-              ],
-            ),
-          ),
-          child: FadeTransition(
-            opacity: _fadeAnimation,
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: CustomScrollView(
-                slivers: [
-                  SliverToBoxAdapter(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildHeader(context, controller),
-                        const SizedBox(height: 24),
-                      ],
-                    ),
+        return Stack(
+          children: [
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Colors.blue.shade50, Colors.indigo.shade50],
+                ),
+              ),
+              child: FadeTransition(
+                opacity: _fadeAnimation,
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: CustomScrollView(
+                    slivers: [
+                      SliverToBoxAdapter(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildHeader(context, controller),
+                            const SizedBox(height: 24),
+                          ],
+                        ),
+                      ),
+                      controller.products.isEmpty
+                          ? SliverFillRemaining(
+                        child: _buildEmptyState(context),
+                      )
+                          : SliverList(
+                        delegate: SliverChildBuilderDelegate(
+                              (BuildContext context, int index) {
+                            final product = controller.products[index];
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: _buildProductCard(product, index),
+                            );
+                          },
+                          childCount: controller.products.length,
+                        ),
+                      ),
+                    ],
                   ),
-                  controller.products.isEmpty
-                      ? SliverFillRemaining(
-                    child: _buildEmptyState(context),
-                  )
-                      : SliverList(
-                    delegate: SliverChildBuilderDelegate(
-                          (BuildContext context, int index) {
-                        final product = controller.products[index];
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 12),
-                          child: _buildProductCard(product, index),
-                        );
-                      },
-                      childCount: controller.products.length,
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
-          ),
+            // Floating button for non-desktop
+            if (!isDesktop)
+              Positioned(
+                bottom: 20,
+                right: 20,
+                child: FloatingActionButton.small(
+                  backgroundColor: Colors.indigo,
+                  onPressed: () => _showAddProductDialog(context),
+                  child: const Icon(Icons.add, color: Colors.white),
+                ),
+              ),
+          ],
         );
       },
     );
@@ -157,18 +170,18 @@ class _AdminProductsTabState extends State<AdminProductsTab>
             child: Icon(
               Icons.inventory_2_rounded,
               color: Colors.indigo.shade700,
-              size: 28,
+              size: 32,
             ),
           ),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
-              crossAxisAlignment: isDesktop ? CrossAxisAlignment.start : CrossAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   isDesktop ? 'Gestion des Produits' : 'Produits',
                   style: const TextStyle(
-                    fontSize: 24,
+                    fontSize: 28,
                     fontWeight: FontWeight.bold,
                     color: Colors.black87,
                   ),
@@ -209,6 +222,7 @@ class _AdminProductsTabState extends State<AdminProductsTab>
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
+                      if(isDesktop)
                       const Icon(Icons.add_rounded, color: Colors.white, size: 20),
                       if(isDesktop)
                         const SizedBox(width: 8),
@@ -471,15 +485,15 @@ class _AdminProductsTabState extends State<AdminProductsTab>
     showDialog(
       context: context,
       builder: (BuildContext context) {
+        final screenWidth = MediaQuery.of(context).size.width;
+        final isDesktop = screenWidth >= 1024;
         return AlertDialog(
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
           title: Row(
             children: [
-              Icon(Icons.warning_rounded, color: Colors.orange.shade600),
-              const SizedBox(width: 8),
-              const Text('Confirmer la suppression'),
+              Text(isDesktop ? 'Confirmer la suppression' : 'Suppression'),
             ],
           ),
           content: Text(
