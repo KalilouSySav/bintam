@@ -1,19 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 
 import '../controllers/auth_controller.dart';
+import '../controllers/cart_controller.dart';
 import '../controllers/order_controller.dart';
 import '../models/order_model.dart';
+import '../widgets/app_drawer.dart';
+import '../widgets/nav_button.dart';
 
-class AdminOrdersTab extends StatefulWidget {
-  const AdminOrdersTab({Key? key}) : super(key: key);
+class OrdersView extends StatefulWidget {
+  const OrdersView({Key? key}) : super(key: key);
 
   @override
-  State<AdminOrdersTab> createState() => _AdminOrdersTabState();
+  State<OrdersView> createState() => _OrdersViewState();
 }
 
-class _AdminOrdersTabState extends State<AdminOrdersTab> with TickerProviderStateMixin {
+class _OrdersViewState extends State<OrdersView> with TickerProviderStateMixin {
   late OrderController _orderController;
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
@@ -36,11 +40,33 @@ class _AdminOrdersTabState extends State<AdminOrdersTab> with TickerProviderStat
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final auth = context.read<AuthController>();
+      if (!auth.isCust) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Row(
+              children: [
+                Icon(Icons.warning_rounded, color: Colors.white, size: 20),
+                SizedBox(width: 12),
+                Text(
+                  'Accès non autorisé',
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                ),
+              ],
+            ),
+            backgroundColor: Colors.red.shade600,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            margin: const EdgeInsets.all(16),
+          ),
+        );
+        context.go('/');
+      }
       if (auth.currentUser != null) {
         _orderController = context.read<OrderController>();
-        _orderController.loadOrders().then((_) {
+        _orderController.loadOrders(auth.currentUser?.id).then((_) {
           _animationController.forward();
         });
+
       }
     });
   }
@@ -210,86 +236,220 @@ class _AdminOrdersTabState extends State<AdminOrdersTab> with TickerProviderStat
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<OrderController>(
-      builder: (context, controller, child) {
-        if (controller.isLoading) {
-          return _buildLoadingState();
-        }
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isDesktop = screenWidth >= 1024;
 
-        return Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                Colors.blue.shade50,
-                Colors.cyan.shade50,
-              ],
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: isDesktop ? 2 : 1,
+        title: isDesktop
+            ? Row(
+          children: [
+            Image.asset(
+              'images/logo-bintam-1.png',
+              height: 40,
             ),
+            const SizedBox(width: 12),
+            const Text(
+              'BintaM',
+              style: TextStyle(
+                fontSize: 24,
+                color: Colors.black,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(width: 16),
+            NavButton(label: 'Accueil', route: '/'),
+            NavButton(label: 'Catalogue', route: '/catalogue'),
+            NavButton(label: 'Contact', route: '/contact'),
+          ],
+        )
+            : const Text('Commande'),
+        actions: [
+          Consumer<CartController>(
+            builder: (context, cart, child) {
+              return IconButton(
+                icon: Stack(
+                  children: [
+                    const Icon(Icons.shopping_cart),
+                    if (cart.itemCount > 0)
+                      Positioned(
+                        right: 0,
+                        top: 0,
+                        child: Container(
+                          padding: const EdgeInsets.all(2),
+                          decoration: BoxDecoration(
+                            color: Colors.red,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          constraints: const BoxConstraints(
+                            minWidth: 16,
+                            minHeight: 16,
+                          ),
+                          child: Text(
+                            '${cart.itemCount}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                onPressed: () => context.go('/cart'),
+              );
+            },
           ),
-          child: FadeTransition(
-            opacity: _fadeAnimation,
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: CustomScrollView(
-                slivers: [
-                  SliverToBoxAdapter(
-                    child: Column(
-                      children: [
-                        _buildHeader(controller),
-                        const SizedBox(height: 20),
-                        _buildSearchAndFilter(),
-                        const SizedBox(height: 20),
-                        _buildStatsCards(),
-                        const SizedBox(height: 20),
-                      ],
-                    ),
-                  ),
-                  _filteredOrders.isEmpty
-                      ? SliverFillRemaining(
-                    child: _buildEmptyState(),
-                  )
-                      : SliverList(
-                    delegate: SliverChildBuilderDelegate(
-                          (BuildContext context, int index) {
-                        final order = _filteredOrders[index];
-                        return TweenAnimationBuilder<double>(
-                          duration: Duration(milliseconds: 300 + (index * 100)),
-                          tween: Tween(begin: 0.0, end: 1.0),
-                          builder: (context, value, child) {
-                            return Transform.translate(
-                              offset: Offset(0, 30 * (1 - value)),
-                              child: Opacity(
-                                opacity: value,
-                                child: Container(
-                                  margin: const EdgeInsets.only(bottom: 16),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(16),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withOpacity(0.08),
-                                        blurRadius: 12,
-                                        offset: const Offset(0, 4),
-                                      ),
-                                    ],
-                                  ),
-                                  child: _buildOrderCard(order),
-                                ),
-                              ),
-                            );
-                          },
-                        );
-                      },
-                      childCount: _filteredOrders.length,
-                    ),
-                  ),
+          Consumer<AuthController>(
+            builder: (context, auth, child) {
+              return PopupMenuButton<String>(
+                icon: const Icon(Icons.person, color: Colors.black),
+                onSelected: (value) {
+                  switch (value) {
+                    case 'auth':
+                      context.go('/auth');
+                      break;
+                    case 'admin':
+                      context.go('/admin');
+                      break;
+                    case 'orders':
+                      context.go('/orders');
+                      break;
+                    case 'visitor':
+                      auth.setVisitorMode();
+                      break;
+                    case 'logout':
+                      auth.signOut();
+                      context.go('/');
+                      break;
+                  }
+                },
+                itemBuilder: (context) {
+                  if (auth.isAuthenticated) {
+                    return [
+                      PopupMenuItem(
+                        value: 'profile',
+                        child: Text('${auth.currentUser?.prenom} ${auth.currentUser?.nom}'),
+                      ),
+                      if (auth.isAdmin)
+                        const PopupMenuItem(
+                          value: 'admin',
+                          child: Text('Administration'),
+                        ),
+                      if(auth.isCust)
+                        const PopupMenuItem(
+                          value: 'orders',
+                          child: Text('Commande'),
+                        ),
+                      const PopupMenuItem(
+                        value: 'logout',
+                        child: Text('Déconnexion'),
+                      ),
+                    ];
+                  } else {
+                    return [
+                      const PopupMenuItem(
+                        value: 'auth',
+                        child: Text('Connexion'),
+                      ),
+                      const PopupMenuItem(
+                        value: 'visitor',
+                        child: Text('Mode Visiteur'),
+                      ),
+                    ];
+                  }
+                },
+              );
+            },
+          ),
+        ],
+        automaticallyImplyLeading: !isDesktop,
+      ),
+      drawer: isDesktop ? null : const AppDrawer(),
+      body: Consumer<OrderController>(
+        builder: (context, controller, child) {
+          if (controller.isLoading) {
+            return _buildLoadingState();
+          }
+
+          return Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Colors.blue.shade50,
+                  Colors.cyan.shade50,
                 ],
               ),
             ),
-          ),
-        );
-      },
+            child: FadeTransition(
+              opacity: _fadeAnimation,
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: CustomScrollView(
+                  slivers: [
+                    SliverToBoxAdapter(
+                      child: Column(
+                        children: [
+                          _buildHeader(controller),
+                          const SizedBox(height: 20),
+                          _buildSearchAndFilter(),
+                          const SizedBox(height: 20),
+                          _buildStatsCards(),
+                          const SizedBox(height: 20),
+                        ],
+                      ),
+                    ),
+                    _filteredOrders.isEmpty
+                        ? SliverFillRemaining(
+                      child: _buildEmptyState(),
+                    )
+                        : SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                            (BuildContext context, int index) {
+                          final order = _filteredOrders[index];
+                          return TweenAnimationBuilder<double>(
+                            duration: Duration(milliseconds: 300 + (index * 100)),
+                            tween: Tween(begin: 0.0, end: 1.0),
+                            builder: (context, value, child) {
+                              return Transform.translate(
+                                offset: Offset(0, 30 * (1 - value)),
+                                child: Opacity(
+                                  opacity: value,
+                                  child: Container(
+                                    margin: const EdgeInsets.only(bottom: 16),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(16),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withOpacity(0.08),
+                                          blurRadius: 12,
+                                          offset: const Offset(0, 4),
+                                        ),
+                                      ],
+                                    ),
+                                    child: _buildOrderCard(order),
+                                  ),
+                                ),
+                              );
+                            },
+                          );
+                        },
+                        childCount: _filteredOrders.length,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      ),
     );
   }
 
@@ -364,7 +524,7 @@ class _AdminOrdersTabState extends State<AdminOrdersTab> with TickerProviderStat
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  isDesktop ? 'Gestion des Commandes' : 'Commandes',
+                  isDesktop ? 'Gestion des Commandes' : 'Commande',
                   style: const TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
@@ -373,26 +533,17 @@ class _AdminOrdersTabState extends State<AdminOrdersTab> with TickerProviderStat
                 ),
                 const SizedBox(height: 4),
                 if(isDesktop)
-                Text(
-                  '${controller.orders.length} commande(s) au total',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.grey.shade600,
-                    fontWeight: FontWeight.w500,
+                  Text(
+                    '${controller.orders.length} commande(s) au total',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.grey.shade600,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
-                ),
               ],
             ),
           ),
-          // IconButton(
-          //   onPressed: () => _orderController.loadOrders(),
-          //   icon: const Icon(Icons.refresh_rounded),
-          //   style: IconButton.styleFrom(
-          //     backgroundColor: Colors.grey.shade100,
-          //     foregroundColor: Colors.grey.shade700,
-          //   ),
-          //   tooltip: 'Actualiser',
-          // ),
         ],
       ),
     );
@@ -418,7 +569,7 @@ class _AdminOrdersTabState extends State<AdminOrdersTab> with TickerProviderStat
             controller: _searchController,
             onChanged: (value) => setState(() => _searchQuery = value),
             decoration: InputDecoration(
-              hintText: 'Rechercher par ID de commande ou client...',
+              hintText: 'Rechercher par ID de commande...',
               prefixIcon: Icon(Icons.search_rounded, color: Colors.grey.shade600),
               suffixIcon: _searchQuery.isNotEmpty
                   ? IconButton(
@@ -845,9 +996,10 @@ class _AdminOrdersTabState extends State<AdminOrdersTab> with TickerProviderStat
                       contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       isDense: true,
                     ),
-                    items: OrderStatus.values.map((status) {
+                    items:  OrderStatus.values.map((status) {
                       return DropdownMenuItem(
                         value: status,
+                        enabled: status == OrderStatus.livree ||  status == OrderStatus.annulee,
                         child: Row(
                           children: [
                             Icon(_getStatusIcon(status), size: 16, color: _getStatusColor(status)),

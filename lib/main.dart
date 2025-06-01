@@ -4,6 +4,7 @@ import 'package:bintam/views/cart_view.dart';
 import 'package:bintam/views/catalogue_view.dart';
 import 'package:bintam/views/contact_view.dart';
 import 'package:bintam/views/home_view.dart';
+import 'package:bintam/views/orders_view.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -41,6 +42,10 @@ class MyApp extends StatelessWidget {
       GoRoute(
         path: '/admin',
         builder: (context, state) => const AdminView(),
+      ),
+      GoRoute(
+        path: '/orders',
+        builder: (context, state) => const OrdersView(),
       ),
       GoRoute(
         path: '/cart',

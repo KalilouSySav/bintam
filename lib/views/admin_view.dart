@@ -182,6 +182,7 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
                           break;
                         case 'logout':
                           auth.signOut();
+                          context.go('/');
                           break;
                       }
                     },

@@ -107,6 +107,9 @@ class _CatalogueViewState extends State<CatalogueView> {
                     case 'admin':
                       context.go('/admin');
                       break;
+                    case 'orders':
+                      context.go('/orders');
+                      break;
                     case 'visitor':
                       auth.setVisitorMode();
                       break;
@@ -126,6 +129,11 @@ class _CatalogueViewState extends State<CatalogueView> {
                         const PopupMenuItem(
                           value: 'admin',
                           child: Text('Administration'),
+                        ),
+                      if(auth.isCust)
+                        const PopupMenuItem(
+                          value: 'orders',
+                          child: Text('Commande'),
                         ),
                       const PopupMenuItem(
                         value: 'logout',

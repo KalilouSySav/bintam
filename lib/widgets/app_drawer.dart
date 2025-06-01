@@ -59,11 +59,11 @@ class AppDrawer extends StatelessWidget {
           const Divider(),
           Consumer<AuthController>(
             builder: (context, auth, child) {
-              if (auth.isAdmin) {
+              if (auth.isAdmin || auth.isCust) {
                 return ListTile(
-                  leading: const Icon(Icons.admin_panel_settings),
-                  title: const Text('Administration'),
-                  onTap: () => context.go('/admin'),
+                  leading: Icon(auth.isAdmin ? Icons.admin_panel_settings : Icons.shopping_bag),
+                  title: Text(auth.isAdmin ? 'Administration' : 'Commande'),
+                  onTap: () => context.go(auth.isAdmin ? '/admin' : '/orders'),
                 );
               }
               return const SizedBox.shrink();

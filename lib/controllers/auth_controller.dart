@@ -15,6 +15,7 @@ class AuthController extends ChangeNotifier {
   bool get isLoading => _isLoading;
   bool get isAuthenticated => _currentUser != null;
   bool get isAdmin => _currentUser?.role == UserRole.admin;
+  bool get isCust => _currentUser?.role == UserRole.client;
 
   Future<bool> signIn(String email, String password) async {
     try {

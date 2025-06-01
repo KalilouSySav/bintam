@@ -62,6 +62,9 @@ class CartView extends StatelessWidget {
                     case 'admin':
                       context.go('/admin');
                       break;
+                    case 'orders':
+                      context.go('/orders');
+                      break;
                     case 'visitor':
                       auth.setVisitorMode();
                       break;
@@ -81,6 +84,11 @@ class CartView extends StatelessWidget {
                         const PopupMenuItem(
                           value: 'admin',
                           child: Text('Administration'),
+                        ),
+                      if(auth.isCust)
+                        const PopupMenuItem(
+                          value: 'orders',
+                          child: Text('Commande'),
                         ),
                       const PopupMenuItem(
                         value: 'logout',

@@ -3,8 +3,8 @@ import 'package:http/http.dart' as http;
 
 /// Service utilitaire pour l'envoi de messages via l'API WhatsApp Business (Meta)
 class WhatsAppService {
-  static const String phoneNumberId = "685994701260677";
-  static const String accessToken = "EAATgZAGYSICIBOwIifvIXzW1CrZCmIcB5e3yZCFEfSt3XObrwmmqDg1ddSxujT1reO9pMqxfywaKz5QPeeQNtzIXmvHMceoLnOnKZBKMjxxdZB0LWYK1duIaENr2FecYmQrN7znZCrTek9LMavUWI9CZCaeZCD2lPZBMa1ZATu5QuZAOQQyKUBSnG6D26s4mjvIAqUJz8Np8qBmFitGQmfdoSCKnYSBH3ZAZBZBPfug0nK";
+  static const String phoneNumberId = "";
+  static const String accessToken = "";
 
   /// Envoie un message texte à un numéro donné via l’API WhatsApp Cloud
   static Future<bool> sendMessage({
