@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../controllers/auth_controller.dart';
@@ -18,13 +19,22 @@ class AdminView extends StatefulWidget {
 
 class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  final FocusNode _focusNode = FocusNode();
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
 
-    // Vérifier les permissions admin
+    _focusNode.addListener(() {
+      if (_focusNode.hasFocus) {
+        RawKeyboard.instance.addListener(_handleKeyEvent);
+      } else {
+        RawKeyboard.instance.removeListener(_handleKeyEvent);
+      }
+    });
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final auth = context.read<AuthController>();
       if (!auth.isAdmin) {
@@ -51,6 +61,24 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
     });
   }
 
+  void _handleKeyEvent(RawKeyEvent event) {
+    if (event is RawKeyDownEvent) {
+      if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+        _scrollController.animateTo(
+          _scrollController.offset - 50,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.ease,
+        );
+      } else if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+        _scrollController.animateTo(
+          _scrollController.offset + 50,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.ease,
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
@@ -59,7 +87,7 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       appBar: PreferredSize(
-        preferredSize: _getAppBarHeight(context), // Dynamic app bar height
+        preferredSize: _getAppBarHeight(context),
         child: Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
@@ -84,9 +112,9 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
             elevation: 0,
             leading: isDesktop ? null : Builder(
               builder: (context) => Container(
-                margin: EdgeInsets.all(_getAppBarPadding(context)), // Dynamic padding
+                margin: EdgeInsets.all(_getAppBarPadding(context)),
                 child: IconButton(
-                  icon: Icon(Icons.menu_rounded, color: Colors.white, size: _getIconSize(context)), // Dynamic icon size
+                  icon: Icon(Icons.menu_rounded, color: Colors.white, size: _getIconSize(context)),
                   onPressed: () => Scaffold.of(context).openDrawer(),
                 ),
               ),
@@ -94,7 +122,6 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
             title: isDesktop
                 ? Row(
               children: [
-                // Logo
                 Image.asset(
                   'images/logo-bintam-1.png',
                   height: 40,
@@ -109,8 +136,6 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
                   ),
                 ),
                 const SizedBox(width: 16),
-
-                // Navigation boutons à gauche
                 NavButton(label: 'Accueil', route: '/', color: Colors.white),
                 NavButton(label: 'Catalogue', route: '/catalogue', color: Colors.white),
                 NavButton(label: 'Contact', route: '/contact', color: Colors.white),
@@ -125,7 +150,6 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
               ),
             ),
             actions: [
-              // Icône panier
               Consumer<CartController>(
                 builder: (context, cart, child) {
                   return IconButton(
@@ -163,8 +187,6 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
                   );
                 },
               ),
-
-              // Menu utilisateur
               Consumer<AuthController>(
                 builder: (context, auth, child) {
                   return PopupMenuButton<String>(
@@ -222,10 +244,10 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
             ],
             automaticallyImplyLeading: !isDesktop,
             bottom: PreferredSize(
-              preferredSize: _getTabBarHeight(context), // Dynamic TabBar height
+              preferredSize: _getTabBarHeight(context),
               child: Container(
                 margin: EdgeInsets.symmetric(
-                  horizontal: _getTabBarHorizontalMargin(context), // Dynamic margin
+                  horizontal: _getTabBarHorizontalMargin(context),
                   vertical: _getTabBarVerticalMargin(context),
                 ),
                 decoration: BoxDecoration(
@@ -249,25 +271,25 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
                       ),
                     ],
                   ),
-                  indicatorPadding: EdgeInsets.symmetric(horizontal: _getIndicatorHorizontalPadding(context)), // Dynamic padding
+                  indicatorPadding: EdgeInsets.symmetric(horizontal: _getIndicatorHorizontalPadding(context)),
                   labelColor: Colors.deepPurple.shade700,
                   unselectedLabelColor: Colors.white.withOpacity(0.8),
                   labelStyle: TextStyle(
                     fontWeight: FontWeight.w600,
-                    fontSize: _getTabLabelFontSize(context), // Dynamic font size
+                    fontSize: _getTabLabelFontSize(context),
                   ),
                   unselectedLabelStyle: TextStyle(
                     fontWeight: FontWeight.w500,
-                    fontSize: _getTabLabelFontSize(context), // Dynamic font size
+                    fontSize: _getTabLabelFontSize(context),
                   ),
                   tabs: [
                     Tab(
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.inventory_2_rounded, size: _getTabIconSize(context)), // Dynamic icon size
+                          Icon(Icons.inventory_2_rounded, size: _getTabIconSize(context)),
                           SizedBox(width: _getTabIconTextSpacing(context)),
-                          Text('Produits'),
+                          const Text('Produits'),
                         ],
                       ),
                     ),
@@ -277,7 +299,7 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
                         children: [
                           Icon(Icons.shopping_cart_rounded, size: _getTabIconSize(context)),
                           SizedBox(width: _getTabIconTextSpacing(context)),
-                          Text('Commandes'),
+                          const Text('Commandes'),
                         ],
                       ),
                     ),
@@ -287,7 +309,7 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
                         children: [
                           Icon(Icons.people_rounded, size: _getTabIconSize(context)),
                           SizedBox(width: _getTabIconTextSpacing(context)),
-                          Text('Utilisateurs'),
+                          const Text('Utilisateurs'),
                         ],
                       ),
                     ),
@@ -299,25 +321,45 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
         ),
       ),
       drawer: isDesktop ? null : const AppDrawer(),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Colors.grey.shade50,
-              Colors.white,
-            ],
-            stops: const [0.0, 0.3],
+      body: RawKeyboardListener(
+        focusNode: _focusNode,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () {
+            _focusNode.requestFocus();
+          },
+          child: InteractiveViewer(
+            boundaryMargin: const EdgeInsets.all(20),
+            minScale: 0.1,
+            maxScale: 4.0,
+            child: SingleChildScrollView(
+              controller: _scrollController,
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.grey.shade50,
+                      Colors.white,
+                    ],
+                    stops: const [0.0, 0.3],
+                  ),
+                ),
+                child: SizedBox(
+                  height: MediaQuery.of(context).size.height,
+                  child: TabBarView(
+                    controller: _tabController,
+                    children: [
+                      _buildTabContent(const AdminProductsTab(), Icons.inventory_2_rounded, context),
+                      _buildTabContent(const AdminOrdersTab(), Icons.shopping_cart_rounded, context),
+                      _buildTabContent(const AdminUsersTab(), Icons.people_rounded, context),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           ),
-        ),
-        child: TabBarView(
-          controller: _tabController,
-          children: [
-            _buildTabContent(const AdminProductsTab(), Icons.inventory_2_rounded, context),
-            _buildTabContent(const AdminOrdersTab(), Icons.shopping_cart_rounded, context),
-            _buildTabContent(const AdminUsersTab(), Icons.people_rounded, context),
-          ],
         ),
       ),
     );
@@ -327,11 +369,11 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
   Size _getAppBarHeight(BuildContext context) {
     final double screenWidth = MediaQuery.of(context).size.width;
     if (screenWidth < 600) {
-      return const Size.fromHeight(120); // Standard for small screens
+      return const Size.fromHeight(120);
     } else if (screenWidth < 900) {
-      return const Size.fromHeight(140); // Slightly taller for medium screens
+      return const Size.fromHeight(140);
     } else {
-      return const Size.fromHeight(160); // Taller for large screens (e.g., desktop)
+      return const Size.fromHeight(160);
     }
   }
 
@@ -345,21 +387,6 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
     return screenWidth < 600 ? 24 : 28;
   }
 
-  double _getTitleFontSize(BuildContext context) {
-    final double screenWidth = MediaQuery.of(context).size.width;
-    return screenWidth < 600 ? 20 : (screenWidth < 900 ? 24 : 28);
-  }
-
-  double _getSubtitleFontSize(BuildContext context) {
-    final double screenWidth = MediaQuery.of(context).size.width;
-    return screenWidth < 600 ? 12 : (screenWidth < 900 ? 14 : 16);
-  }
-
-  Size _getTabBarHeight(BuildContext context) {
-    final double screenWidth = MediaQuery.of(context).size.width;
-    return Size.fromHeight(screenWidth < 600 ? 50 : 60);
-  }
-
   double _getTabBarHorizontalMargin(BuildContext context) {
     final double screenWidth = MediaQuery.of(context).size.width;
     return screenWidth < 600 ? 16 : (screenWidth < 900 ? 32 : 64);
@@ -370,9 +397,13 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
     return screenWidth < 600 ? 8 : 12;
   }
 
+  Size _getTabBarHeight(BuildContext context) {
+    final double screenWidth = MediaQuery.of(context).size.width;
+    return Size.fromHeight(screenWidth < 600 ? 50 : 60);
+  }
+
   double _getIndicatorHorizontalPadding(BuildContext context) {
     final double screenWidth = MediaQuery.of(context).size.width;
-    // This value often needs careful tuning. Adjust based on visual testing.
     return screenWidth < 600 ? -20 : -40;
   }
 
@@ -419,6 +450,8 @@ class _AdminViewState extends State<AdminView> with SingleTickerProviderStateMix
   @override
   void dispose() {
     _tabController.dispose();
+    _focusNode.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 }

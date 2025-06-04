@@ -1,23 +1,19 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
-
 import '../dao/user_dao.dart';
 import '../models/user_model.dart';
 
 class AuthController extends ChangeNotifier {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final UserDao _userDao = UserDao();
-  User? _user;
-  String? _verificationId;
-  int? _resendToken;
-
-  // Nouveaux getters pour l'authentification par téléphone
-  String? get verificationId => _verificationId;
-  bool get isPhoneVerificationInProgress => _verificationId != null;
-
 
   UserModel? _currentUser;
   bool _isLoading = false;
+  String? _verificationId; // Pour stocker l'ID de vérification du SMS
+  int? _resendToken; // Pour le renvoi de SMS
+  String _pendingPhoneNumber = "";
+  String? _pendingNom; // Nom en attente (pour l'inscription)
+  String? _pendingPrenom; // Prénom en attente (pour l'inscription)
 
   UserModel? get currentUser => _currentUser;
   bool get isLoading => _isLoading;
@@ -74,7 +70,6 @@ class AuthController extends ChangeNotifier {
 
         await _userDao.create(newUser);
         _currentUser = newUser;
-
         _isLoading = false;
         notifyListeners();
         return true;
@@ -90,9 +85,235 @@ class AuthController extends ChangeNotifier {
     }
   }
 
+  // Pour envoyer le code de vérification (connexion)
+  Future<bool> sendPhoneVerificationCode(String phoneNumber) async {
+    try {
+      _isLoading = true;
+      notifyListeners();
+
+      // Vérifier si l'utilisateur existe déjà avec ce numéro
+      final existingUser = await _userDao.getUserByEmail(phoneNumber);
+      if (existingUser == null) {
+        _isLoading = false;
+        notifyListeners();
+        throw Exception('Aucun compte associé à ce numéro de téléphone');
+      }
+
+      _pendingPhoneNumber = phoneNumber;
+
+      await _auth.verifyPhoneNumber(
+        phoneNumber: phoneNumber,
+        verificationCompleted: (PhoneAuthCredential credential) async {
+          // Vérification automatique (Android uniquement)
+          await _signInWithPhoneCredential(credential);
+        },
+        verificationFailed: (FirebaseAuthException e) {
+          _isLoading = false;
+          notifyListeners();
+          throw Exception('Erreur de vérification: ${e.message}');
+        },
+        codeSent: (String verificationId, int? resendToken) {
+          _verificationId = verificationId;
+          _resendToken = resendToken;
+          _isLoading = false;
+          notifyListeners();
+        },
+        codeAutoRetrievalTimeout: (String verificationId) {
+          _verificationId = verificationId;
+          _isLoading = false;
+          notifyListeners();
+        },
+        forceResendingToken: _resendToken,
+      );
+
+      return true;
+    } catch (e) {
+      _isLoading = false;
+      notifyListeners();
+      throw Exception('Erreur d\'envoi du SMS: $e');
+    }
+  }
+
+  // Pour envoyer le code de vérification (inscription)
+  Future<bool> sendPhoneVerificationCodeForSignUp(String phoneNumber, String nom, String prenom) async {
+    try {
+      _isLoading = true;
+      notifyListeners();
+
+      // Vérifier si l'utilisateur existe déjà avec ce numéro
+      final existingUser = await _userDao.getUserByEmail(phoneNumber);
+      if (existingUser != null) {
+        _isLoading = false;
+        notifyListeners();
+        throw Exception('Un compte existe déjà avec ce numéro de téléphone');
+      }
+
+      _pendingPhoneNumber = phoneNumber;
+      _pendingNom = nom;
+      _pendingPrenom = prenom;
+
+      await _auth.verifyPhoneNumber(
+        phoneNumber: phoneNumber,
+        verificationCompleted: (PhoneAuthCredential credential) async {
+          // Vérification automatique (Android uniquement)
+          await _signUpWithPhoneCredential(credential);
+        },
+        verificationFailed: (FirebaseAuthException e) {
+          _isLoading = false;
+          notifyListeners();
+          throw Exception('Erreur de vérification: ${e.message}');
+        },
+        codeSent: (String verificationId, int? resendToken) {
+          _verificationId = verificationId;
+          _resendToken = resendToken;
+          _isLoading = false;
+          notifyListeners();
+        },
+        codeAutoRetrievalTimeout: (String verificationId) {
+          _verificationId = verificationId;
+          _isLoading = false;
+          notifyListeners();
+        },
+        forceResendingToken: _resendToken,
+      );
+
+      return true;
+    } catch (e) {
+      _isLoading = false;
+      notifyListeners();
+      throw Exception('Erreur d\'envoi du SMS: $e');
+    }
+  }
+
+  // Pour vérifier le code (connexion)
+  Future<bool> verifyPhoneCode(String phoneNumber, String code) async {
+    try {
+      _isLoading = true;
+      notifyListeners();
+
+      if (_verificationId == null) {
+        throw Exception('Code de vérification expiré. Veuillez redemander un code.');
+      }
+
+      final credential = PhoneAuthProvider.credential(
+        verificationId: _verificationId!,
+        smsCode: code,
+      );
+
+      final result = await _signInWithPhoneCredential(credential);
+
+      _clearPendingData();
+      return result;
+    } catch (e) {
+      _isLoading = false;
+      notifyListeners();
+      throw Exception('Code invalide: $e');
+    }
+  }
+
+  // Pour vérifier le code (inscription)
+  Future<bool> verifyPhoneCodeForSignUp(String phoneNumber, String code, String nom, String prenom) async {
+    try {
+      _isLoading = true;
+      notifyListeners();
+
+      if (_verificationId == null) {
+        throw Exception('Code de vérification expiré. Veuillez redemander un code.');
+      }
+
+      final credential = PhoneAuthProvider.credential(
+        verificationId: _verificationId!,
+        smsCode: code,
+      );
+
+      final result = await _signUpWithPhoneCredential(credential);
+
+      _clearPendingData();
+      return result;
+    } catch (e) {
+      _isLoading = false;
+      notifyListeners();
+      throw Exception('Code invalide: $e');
+    }
+  }
+
+  // Méthode privée pour la connexion avec les credentials du téléphone
+  Future<bool> _signInWithPhoneCredential(PhoneAuthCredential credential) async {
+    try {
+      final userCredential = await _auth.signInWithCredential(credential);
+
+      if (userCredential.user != null) {
+        // Récupérer l'utilisateur depuis la base de données
+        _currentUser = await _userDao.getUserByEmail(_pendingPhoneNumber);
+
+        if (_currentUser == null) {
+          // L'utilisateur n'existe pas en base, déconnecter
+          await _auth.signOut();
+          throw Exception('Aucun compte associé à ce numéro');
+        }
+
+        _isLoading = false;
+        notifyListeners();
+        return true;
+      }
+
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    } catch (e) {
+      _isLoading = false;
+      notifyListeners();
+      rethrow;
+    }
+  }
+
+  // Méthode privée pour l'inscription avec les credentials du téléphone
+  Future<bool> _signUpWithPhoneCredential(PhoneAuthCredential credential) async {
+    try {
+      final userCredential = await _auth.signInWithCredential(credential);
+
+      if (userCredential.user != null) {
+        // Créer l'utilisateur en base de données
+        final newUser = UserModel(
+          id: userCredential.user!.uid,
+          email:  _pendingPhoneNumber,
+          nom: _pendingNom!,
+          prenom: _pendingPrenom!,
+          role: UserRole.client,
+          dateCreation: DateTime.now(),
+        );
+
+        await _userDao.create(newUser);
+        _currentUser = newUser;
+
+        _isLoading = false;
+        notifyListeners();
+        return true;
+      }
+
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    } catch (e) {
+      _isLoading = false;
+      notifyListeners();
+      rethrow;
+    }
+  }
+
+  // Nettoyer les données temporaires
+  void _clearPendingData() {
+    _verificationId = null;
+    _resendToken = null;
+    _pendingPhoneNumber = "";
+    _pendingNom = null;
+    _pendingPrenom = null;
+  }
+
   Future<void> signOut() async {
     await _auth.signOut();
     _currentUser = null;
+    _clearPendingData();
     notifyListeners();
   }
 
@@ -106,180 +327,5 @@ class AuthController extends ChangeNotifier {
       dateCreation: DateTime.now(),
     );
     notifyListeners();
-  }
-
-  // Nouvelles méthodes pour l'authentification par téléphone
-  Future<void> verifyPhoneNumber(
-      String phoneNumber, {
-        Function(String)? onCodeSent,
-        Function(String)? onError,
-        Function()? onCompleted,
-      }) async {
-    _setLoading(true);
-
-    try {
-      await _auth.verifyPhoneNumber(
-        phoneNumber: phoneNumber,
-        verificationCompleted: (PhoneAuthCredential credential) async {
-          // Connexion automatique (Android uniquement)
-          try {
-            await _auth.signInWithCredential(credential);
-            _verificationId = null;
-            _setLoading(false);
-            onCompleted?.call();
-          } catch (e) {
-            _setLoading(false);
-            onError?.call('Erreur de vérification automatique: ${e.toString()}');
-          }
-        },
-        verificationFailed: (FirebaseAuthException e) {
-          _setLoading(false);
-          String errorMessage;
-
-          switch (e.code) {
-            case 'invalid-phone-number':
-              errorMessage = 'Le numéro de téléphone n\'est pas valide.';
-              break;
-            case 'too-many-requests':
-              errorMessage = 'Trop de tentatives. Veuillez réessayer plus tard.';
-              break;
-            case 'quota-exceeded':
-              errorMessage = 'Quota SMS dépassé. Veuillez réessayer plus tard.';
-              break;
-            default:
-              errorMessage = 'Erreur de vérification: ${e.message}';
-          }
-
-          onError?.call(errorMessage);
-        },
-        codeSent: (String verificationId, int? resendToken) {
-          _verificationId = verificationId;
-          _resendToken = resendToken;
-          _setLoading(false);
-          onCodeSent?.call('Code envoyé au $phoneNumber');
-          notifyListeners();
-        },
-        codeAutoRetrievalTimeout: (String verificationId) {
-          _verificationId = verificationId;
-          _setLoading(false);
-          notifyListeners();
-        },
-        timeout: const Duration(seconds: 60),
-        forceResendingToken: _resendToken,
-      );
-    } catch (e) {
-      _setLoading(false);
-      onError?.call('Erreur lors de l\'envoi du SMS: ${e.toString()}');
-    }
-  }
-
-  Future<bool> verifyOTP(String otp) async {
-    if (_verificationId == null) {
-      throw Exception('Aucune vérification en cours');
-    }
-
-    _setLoading(true);
-    try {
-      PhoneAuthCredential credential = PhoneAuthProvider.credential(
-        verificationId: _verificationId!,
-        smsCode: otp,
-      );
-
-      await _auth.signInWithCredential(credential);
-      _verificationId = null;
-      _resendToken = null;
-      return true;
-    } catch (e) {
-      String errorMessage;
-      if (e is FirebaseAuthException) {
-        switch (e.code) {
-          case 'invalid-verification-code':
-            errorMessage = 'Code de vérification invalide.';
-            break;
-          case 'session-expired':
-            errorMessage = 'Session expirée. Veuillez recommencer.';
-            break;
-          default:
-            errorMessage = 'Erreur de vérification: ${e.message}';
-        }
-      } else {
-        errorMessage = 'Erreur: ${e.toString()}';
-      }
-      throw Exception(errorMessage);
-    } finally {
-      _setLoading(false);
-    }
-  }
-
-  Future<void> resendOTP(String phoneNumber) async {
-    if (_verificationId == null) {
-      throw Exception('Aucune vérification en cours');
-    }
-
-    await verifyPhoneNumber(phoneNumber);
-  }
-
-  // Lier un numéro de téléphone à un compte existant
-  Future<bool> linkPhoneNumber(String phoneNumber, String otp) async {
-    if (_user == null) {
-      throw Exception('Aucun utilisateur connecté');
-    }
-
-    _setLoading(true);
-    try {
-      PhoneAuthCredential credential = PhoneAuthProvider.credential(
-        verificationId: _verificationId!,
-        smsCode: otp,
-      );
-
-      await _user!.linkWithCredential(credential);
-      _verificationId = null;
-      _resendToken = null;
-      return true;
-    } catch (e) {
-      throw Exception('Erreur lors de la liaison: ${e.toString()}');
-    } finally {
-      _setLoading(false);
-    }
-  }
-
-  // Délier un numéro de téléphone
-  Future<void> unlinkPhoneNumber() async {
-    if (_user == null) {
-      throw Exception('Aucun utilisateur connecté');
-    }
-
-    _setLoading(true);
-    try {
-      await _user!.unlink(PhoneAuthProvider.PROVIDER_ID);
-    } catch (e) {
-      throw Exception('Erreur lors de la suppression: ${e.toString()}');
-    } finally {
-      _setLoading(false);
-    }
-  }
-
-  void cancelPhoneVerification() {
-    _verificationId = null;
-    _resendToken = null;
-    _setLoading(false);
-    notifyListeners();
-  }
-
-  void _setLoading(bool loading) {
-    _isLoading = loading;
-    notifyListeners();
-  }
-
-  // Vérifier si l'utilisateur a un numéro de téléphone lié
-  bool get hasPhoneNumber {
-    return _user?.providerData.any(
-            (info) => info.providerId == PhoneAuthProvider.PROVIDER_ID
-    ) ?? false;
-  }
-
-  // Obtenir le numéro de téléphone de l'utilisateur
-  String? get phoneNumber {
-    return _user?.phoneNumber;
   }
 }
