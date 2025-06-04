@@ -3,6 +3,8 @@ import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:image/image.dart' as img;
+import 'package:http/http.dart' as http;
+import 'package:path/path.dart' as path;
 
 /// Fonction qui compresse une image en réduisant sa qualité et/ou ses dimensions
 Uint8List compressImage(Uint8List imageBytes, {
@@ -100,4 +102,124 @@ Future<String?> pickImageAsBase64String({
 
   // Retourne null si aucun fichier sélectionné ou erreur
   return null;
+}
+
+Future<String?> pickImageAndUploadToAWS({
+  required String awsBucketUrl, // ex: https://your-bucket-name.s3.amazonaws.com
+  String awsFolder = "uploads", // ex: dossier dans le bucket
+  bool enableCompression = true,
+  int compressionQuality = 85,
+  int? maxWidth = 1920,
+  int? maxHeight = 1080,
+}) async {
+  final result = await FilePicker.platform.pickFiles(
+    type: FileType.image,
+    withData: true,
+    allowMultiple: false,
+  );
+
+  if (result != null && result.files.isNotEmpty) {
+    final file = result.files.first;
+    Uint8List? fileBytes = file.bytes;
+    String fileName = path.basename(file.name);
+
+    // Compression
+    if (enableCompression && fileBytes != null) {
+      try {
+        img.Image? image = img.decodeImage(fileBytes);
+        if (image != null) {
+          if (maxWidth != null || maxHeight != null) {
+            image = img.copyResize(image, width: maxWidth, height: maxHeight, maintainAspect: true);
+          }
+          fileBytes = Uint8List.fromList(img.encodeJpg(image, quality: compressionQuality));
+        }
+      } catch (e) {
+        print('Erreur lors de la compression: $e');
+      }
+    }
+
+    if (fileBytes != null) {
+      final objectKey = '$awsFolder/$fileName';
+      final url = '$awsBucketUrl/$objectKey';
+
+      // Upload avec PUT
+      final response = await http.put(
+        Uri.parse(url),
+        headers: {
+          'Content-Type': 'image/jpeg',
+        },
+        body: fileBytes,
+      );
+
+      if (response.statusCode == 200) {
+        print(url);
+        return url;
+      } else {
+        print('Erreur AWS: ${response.statusCode} - ${response.body}');
+      }
+    }
+  }
+
+  return null;
+}
+
+Future<List<String>> pickAndUploadMultipleImagesToAWS({
+  required String awsBucketUrl, // ex: https://your-bucket-name.s3.amazonaws.com
+  String awsFolder = "uploads",
+  bool enableCompression = true,
+  int compressionQuality = 85,
+  int? maxWidth = 1920,
+  int? maxHeight = 1080,
+}) async {
+  final result = await FilePicker.platform.pickFiles(
+    type: FileType.image,
+    withData: true,
+    allowMultiple: true,
+  );
+
+  List<String> uploadedUrls = [];
+
+  if (result != null && result.files.isNotEmpty) {
+    for (var file in result.files) {
+      Uint8List? fileBytes = file.bytes;
+      String fileName = path.basename(file.name);
+
+      // Compression si activée
+      if (enableCompression && fileBytes != null) {
+        try {
+          img.Image? image = img.decodeImage(fileBytes);
+          if (image != null) {
+            if (maxWidth != null || maxHeight != null) {
+              image = img.copyResize(image, width: maxWidth, height: maxHeight, maintainAspect: true);
+            }
+            fileBytes = Uint8List.fromList(img.encodeJpg(image, quality: compressionQuality));
+          }
+        } catch (e) {
+          print('Erreur lors de la compression de ${file.name}: $e');
+        }
+      }
+
+      if (fileBytes != null) {
+        final objectKey = '$awsFolder/$fileName';
+        final url = '$awsBucketUrl/$objectKey';
+
+        final response = await http.put(
+          Uri.parse(url),
+          headers: {
+            'Content-Type': 'image/jpeg',
+            // ⚠️ Ne pas inclure 'x-amz-acl' si le bucket a les ACL désactivées
+          },
+          body: fileBytes,
+        );
+
+        if (response.statusCode == 200) {
+          uploadedUrls.add(url);
+        } else {
+          print('Erreur AWS pour $fileName: ${response.statusCode} - ${response.body}');
+        }
+      }
+    }
+  }
+
+  return uploadedUrls;
 }

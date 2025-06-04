@@ -35,9 +35,9 @@ class _AuthViewState extends State<AuthView> {
   Widget _buildResponsiveBody(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        // Définition des breakpoints
         final isSmallScreen = constraints.maxWidth < 600;
-        final isMediumScreen = constraints.maxWidth >= 600 && constraints.maxWidth < 1200;
+        final isMediumScreen =
+            constraints.maxWidth >= 600 && constraints.maxWidth < 1200;
         final isLargeScreen = constraints.maxWidth >= 1200;
 
         return Center(
@@ -48,12 +48,14 @@ class _AuthViewState extends State<AuthView> {
             ),
             child: Container(
               constraints: BoxConstraints(
-                maxWidth: _getMaxWidth(isSmallScreen, isMediumScreen, isLargeScreen),
+                maxWidth:
+                _getMaxWidth(isSmallScreen, isMediumScreen, isLargeScreen),
               ),
               child: Card(
                 elevation: isSmallScreen ? 4 : 8,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(isSmallScreen ? 12 : 16),
+                  borderRadius:
+                  BorderRadius.circular(isSmallScreen ? 12 : 16),
                 ),
                 child: Padding(
                   padding: EdgeInsets.all(_getCardPadding(isSmallScreen)),
@@ -65,24 +67,19 @@ class _AuthViewState extends State<AuthView> {
                       children: [
                         _buildHeader(isSmallScreen),
                         SizedBox(height: isSmallScreen ? 24 : 32),
-
-                        // Champs de formulaire
                         if (!_isLogin) ...[
                           _buildNameFields(isSmallScreen, isMediumScreen),
                           SizedBox(height: isSmallScreen ? 12 : 16),
                         ],
-
                         _buildEmailField(),
                         SizedBox(height: isSmallScreen ? 12 : 16),
                         _buildPasswordField(),
                         SizedBox(height: isSmallScreen ? 24 : 32),
-
-                        // Bouton de soumission
                         _buildSubmitButton(isSmallScreen),
                         SizedBox(height: isSmallScreen ? 12 : 16),
-
-                        // Bouton de basculement
                         _buildToggleButton(isSmallScreen),
+                        SizedBox(height: isSmallScreen ? 12 : 16),
+                        _buildPhoneAuthButton(isSmallScreen),
                       ],
                     ),
                   ),
@@ -111,7 +108,6 @@ class _AuthViewState extends State<AuthView> {
   }
 
   Widget _buildNameFields(bool isSmallScreen, bool isMediumScreen) {
-    // Sur les écrans larges, afficher prénom et nom côte à côte
     if (!isSmallScreen) {
       return Row(
         children: [
@@ -144,7 +140,6 @@ class _AuthViewState extends State<AuthView> {
       );
     }
 
-    // Sur les petits écrans, afficher verticalement
     return Column(
       children: [
         TextFormField(
@@ -232,7 +227,7 @@ class _AuthViewState extends State<AuthView> {
               ),
             )
                 : Text(
-              _isLogin ? 'Se connecter' : 'S\'inscrire',
+              _isLogin ? 'Se connecter' : "S'inscrire",
               style: TextStyle(
                 fontSize: isSmallScreen ? 14 : 16,
                 fontWeight: FontWeight.w600,
@@ -249,7 +244,6 @@ class _AuthViewState extends State<AuthView> {
       onPressed: () {
         setState(() {
           _isLogin = !_isLogin;
-          // Nettoyer les champs lors du basculement
           _emailController.clear();
           _passwordController.clear();
           _nomController.clear();
@@ -274,6 +268,27 @@ class _AuthViewState extends State<AuthView> {
     );
   }
 
+  Widget _buildPhoneAuthButton(bool isSmallScreen) {
+    return TextButton(
+      onPressed: () {
+        context.go('/phone-auth');
+      },
+      style: TextButton.styleFrom(
+        padding: EdgeInsets.symmetric(
+          vertical: isSmallScreen ? 12 : 16,
+        ),
+      ),
+      child: Text(
+        'Se connecter avec un numéro de téléphone',
+        style: TextStyle(
+          fontSize: isSmallScreen ? 13 : 14,
+          color: Colors.blue,
+        ),
+        textAlign: TextAlign.center,
+      ),
+    );
+  }
+
   InputDecoration _getInputDecoration(String label) {
     return InputDecoration(
       labelText: label,
@@ -292,7 +307,8 @@ class _AuthViewState extends State<AuthView> {
         borderRadius: BorderRadius.circular(8),
         borderSide: const BorderSide(color: Colors.red),
       ),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      contentPadding:
+      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
     );
   }
 
@@ -306,7 +322,8 @@ class _AuthViewState extends State<AuthView> {
     return isSmallScreen ? 16 : 32;
   }
 
-  double _getMaxWidth(bool isSmallScreen, bool isMediumScreen, bool isLargeScreen) {
+  double _getMaxWidth(
+      bool isSmallScreen, bool isMediumScreen, bool isLargeScreen) {
     if (isSmallScreen) return double.infinity;
     if (isMediumScreen) return 500;
     return 600;

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
@@ -7,6 +8,7 @@ import '../controllers/auth_controller.dart';
 import '../controllers/cart_controller.dart';
 import '../controllers/order_controller.dart';
 import '../models/order_model.dart';
+import '../utils/send_sms_service.dart';
 import '../widgets/app_drawer.dart';
 import '../widgets/nav_button.dart';
 
@@ -21,6 +23,10 @@ class _OrdersViewState extends State<OrdersView> with TickerProviderStateMixin {
   late OrderController _orderController;
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
+  late TransformationController _transformationController;
+  late ScrollController _scrollController;
+  double _scale = 1.0;
+  double _previousScale = 1.0;
 
   String _selectedStatusFilter = 'Tous';
   final TextEditingController _searchController = TextEditingController();
@@ -29,7 +35,6 @@ class _OrdersViewState extends State<OrdersView> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
-
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 800),
       vsync: this,
@@ -37,6 +42,8 @@ class _OrdersViewState extends State<OrdersView> with TickerProviderStateMixin {
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
     );
+    _transformationController = TransformationController();
+    _scrollController = ScrollController();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final auth = context.read<AuthController>();
@@ -66,7 +73,6 @@ class _OrdersViewState extends State<OrdersView> with TickerProviderStateMixin {
         _orderController.loadOrders(auth.currentUser?.id).then((_) {
           _animationController.forward();
         });
-
       }
     });
   }
@@ -75,6 +81,8 @@ class _OrdersViewState extends State<OrdersView> with TickerProviderStateMixin {
   void dispose() {
     _animationController.dispose();
     _searchController.dispose();
+    _scrollController.dispose();
+    _transformationController.dispose();
     super.dispose();
   }
 
@@ -177,9 +185,44 @@ class _OrdersViewState extends State<OrdersView> with TickerProviderStateMixin {
     }
   }
 
-  void _sendNotification(String orderId) {
+  Future<void> _sendNotification(String orderId) async {
+    final currentOrder = _orderController.orders.firstWhere((order) => order.id == orderId);
+    final auth = context.read<AuthController>();
+
+    bool? confirmUpdate = await _showConfirmationDialog(
+        'Confirmer l\'envoi du message',
+        'Êtes-vous sûr de vouloir notifier le vendeur que le statut de cette commande est "${_getStatusLabel(currentOrder.status)}"?'
+    );
+    if (confirmUpdate == false) return;
+
+    final message = """
+Bonjour Maguiraga,
+
+📦 Mise à jour de commande reçue.
+
+🆔 Commande : #$orderId
+👤 Client : ${auth.currentUser?.nom}
+📞 Téléphone : ${currentOrder.telephone}
+🕒 Date : ${DateFormat('dd/MM/yyyy – HH:mm').format(DateTime.now())}
+
+🔄 Nouveau statut : ${_getStatusLabel(currentOrder.status)}
+
+Merci de vérifier et de traiter cette mise à jour rapidement.
+""";
+
+    final smsService = SendSmsService(
+      apiUrl: 'https://kjgqv646d5.execute-api.us-east-1.amazonaws.com/send-sms',
+    );
+    final success = await smsService.sendSms(
+      phoneNumber: currentOrder.telephone,
+      message: message,
+    );
     if (mounted) {
-      _showSnackBar('Notification envoyée pour la commande #$orderId!');
+      _showSnackBar(
+          success ? 'Notification envoyée pour la commande #$orderId!' :
+          'Une erreur s\'est produite. L\'envoi du message a échoué!',
+          isError: !success
+      );
     }
   }
 
@@ -390,60 +433,90 @@ class _OrdersViewState extends State<OrdersView> with TickerProviderStateMixin {
               opacity: _fadeAnimation,
               child: Padding(
                 padding: const EdgeInsets.all(20),
-                child: CustomScrollView(
-                  slivers: [
-                    SliverToBoxAdapter(
-                      child: Column(
-                        children: [
-                          _buildHeader(controller),
-                          const SizedBox(height: 20),
-                          _buildSearchAndFilter(),
-                          const SizedBox(height: 20),
-                          _buildStatsCards(),
-                          const SizedBox(height: 20),
-                        ],
-                      ),
-                    ),
-                    _filteredOrders.isEmpty
-                        ? SliverFillRemaining(
-                      child: _buildEmptyState(),
-                    )
-                        : SliverList(
-                      delegate: SliverChildBuilderDelegate(
-                            (BuildContext context, int index) {
-                          final order = _filteredOrders[index];
-                          return TweenAnimationBuilder<double>(
-                            duration: Duration(milliseconds: 300 + (index * 100)),
-                            tween: Tween(begin: 0.0, end: 1.0),
-                            builder: (context, value, child) {
-                              return Transform.translate(
-                                offset: Offset(0, 30 * (1 - value)),
-                                child: Opacity(
-                                  opacity: value,
-                                  child: Container(
-                                    margin: const EdgeInsets.only(bottom: 16),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      borderRadius: BorderRadius.circular(16),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.black.withOpacity(0.08),
-                                          blurRadius: 12,
-                                          offset: const Offset(0, 4),
+                child: KeyboardListener(
+                  focusNode: FocusNode(),
+                  onKeyEvent: (KeyEvent event) {
+                    if (event is KeyDownEvent) {
+                      if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+                        _scrollController.animateTo(
+                          _scrollController.offset - 50,
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.ease,
+                        );
+                      } else if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+                        _scrollController.animateTo(
+                          _scrollController.offset + 50,
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.ease,
+                        );
+                      }
+                    }
+                  },
+                  child: InteractiveViewer(
+                    transformationController: _transformationController,
+                    onInteractionStart: (details) {
+                      _previousScale = _scale;
+                    },
+                    onInteractionUpdate: (details) {
+                      _scale = _previousScale * details.scale;
+                    },
+                    child: CustomScrollView(
+                      controller: _scrollController,
+                      slivers: [
+                        SliverToBoxAdapter(
+                          child: Column(
+                            children: [
+                              _buildHeader(controller),
+                              const SizedBox(height: 20),
+                              _buildSearchAndFilter(),
+                              const SizedBox(height: 20),
+                              _buildStatsCards(),
+                              const SizedBox(height: 20),
+                            ],
+                          ),
+                        ),
+                        _filteredOrders.isEmpty
+                            ? SliverFillRemaining(
+                          child: _buildEmptyState(),
+                        )
+                            : SliverList(
+                          delegate: SliverChildBuilderDelegate(
+                                (BuildContext context, int index) {
+                              final order = _filteredOrders[index];
+                              return TweenAnimationBuilder<double>(
+                                duration: Duration(milliseconds: 300 + (index * 100)),
+                                tween: Tween(begin: 0.0, end: 1.0),
+                                builder: (context, value, child) {
+                                  return Transform.translate(
+                                    offset: Offset(0, 30 * (1 - value)),
+                                    child: Opacity(
+                                      opacity: value,
+                                      child: Container(
+                                        margin: const EdgeInsets.only(bottom: 16),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          borderRadius: BorderRadius.circular(16),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: Colors.black.withOpacity(0.08),
+                                              blurRadius: 12,
+                                              offset: const Offset(0, 4),
+                                            ),
+                                          ],
                                         ),
-                                      ],
+                                        child: _buildOrderCard(order),
+                                      ),
                                     ),
-                                    child: _buildOrderCard(order),
-                                  ),
-                                ),
+                                  );
+                                },
                               );
                             },
-                          );
-                        },
-                        childCount: _filteredOrders.length,
-                      ),
+                            childCount: _filteredOrders.length,
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               ),
             ),
@@ -532,7 +605,7 @@ class _OrdersViewState extends State<OrdersView> with TickerProviderStateMixin {
                   ),
                 ),
                 const SizedBox(height: 4),
-                if(isDesktop)
+                if (isDesktop)
                   Text(
                     '${controller.orders.length} commande(s) au total',
                     style: TextStyle(
@@ -777,7 +850,8 @@ class _OrdersViewState extends State<OrdersView> with TickerProviderStateMixin {
                           backgroundColor: Colors.blue,
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10)),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
                         ),
                       ),
                     ],
@@ -790,7 +864,6 @@ class _OrdersViewState extends State<OrdersView> with TickerProviderStateMixin {
       },
     );
   }
-
 
   Widget _buildOrderCard(OrderModel order) {
     final statusColor = _getStatusColor(order.status);
@@ -823,7 +896,7 @@ class _OrdersViewState extends State<OrdersView> with TickerProviderStateMixin {
                       'Commande #${order.id}',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
-                        fontSize: isDesktop ? 20 : 10,
+                        fontSize: isDesktop ? 20 : 16,
                         color: Colors.black87,
                       ),
                     ),
@@ -832,7 +905,7 @@ class _OrdersViewState extends State<OrdersView> with TickerProviderStateMixin {
                       dateFormatter.format(order.dateCommande.toLocal()),
                       style: TextStyle(
                         color: Colors.grey.shade600,
-                        fontSize: isDesktop ? 14 : 10,
+                        fontSize: isDesktop ? 14 : 12,
                       ),
                     ),
                   ],
@@ -871,7 +944,7 @@ class _OrdersViewState extends State<OrdersView> with TickerProviderStateMixin {
                   style: TextStyle(
                     color: Colors.grey.shade700,
                     fontWeight: FontWeight.w500,
-                    fontSize: isDesktop ? 14 : 10,
+                    fontSize: isDesktop ? 14 : 12,
                   ),
                 ),
               ],
@@ -938,7 +1011,7 @@ class _OrdersViewState extends State<OrdersView> with TickerProviderStateMixin {
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
-                    '${item.sousTotal.toStringAsFixed(2)} \$',
+                    '${item.sousTotal.toStringAsFixed(2)} CFA',
                     style: TextStyle(
                       color: Colors.green.shade700,
                       fontWeight: FontWeight.w600,
@@ -970,7 +1043,7 @@ class _OrdersViewState extends State<OrdersView> with TickerProviderStateMixin {
                   ),
                 ),
                 Text(
-                  '${order.montantTotal.toStringAsFixed(2)} \$',
+                  '${order.montantTotal.toStringAsFixed(2)} CFA',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 20,
@@ -996,10 +1069,10 @@ class _OrdersViewState extends State<OrdersView> with TickerProviderStateMixin {
                       contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       isDense: true,
                     ),
-                    items:  OrderStatus.values.map((status) {
+                    items: OrderStatus.values.map((status) {
                       return DropdownMenuItem(
                         value: status,
-                        enabled: status == OrderStatus.livree ||  status == OrderStatus.annulee,
+                        enabled: status == OrderStatus.livree || status == OrderStatus.annulee,
                         child: Row(
                           children: [
                             Icon(_getStatusIcon(status), size: 16, color: _getStatusColor(status)),

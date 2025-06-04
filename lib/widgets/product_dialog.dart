@@ -385,7 +385,12 @@ class _ProductDialogState extends State<ProductDialog> {
     });
 
     try {
-      final path = await pickImageAsBase64String();
+      // final path = await pickImageAsBase64String();
+      final path = await  await pickImageAndUploadToAWS(
+        awsBucketUrl: 'https://bintam.s3.amazonaws.com',
+        awsFolder: 'product_images',
+      );
+
       if (mounted) {
         setState(() {
           _isPickingFile = false;
@@ -423,7 +428,11 @@ class _ProductDialogState extends State<ProductDialog> {
     });
 
     try {
-      final paths = await pickImagesAsBase64Strings();
+      // final paths = await pickImagesAsBase64Strings();
+      final paths = await pickAndUploadMultipleImagesToAWS(
+        awsBucketUrl: 'https://bintam.s3.amazonaws.com',
+        awsFolder: 'product_images/',
+      );
       if (mounted) {
         setState(() {
           _isPickingFile = false;

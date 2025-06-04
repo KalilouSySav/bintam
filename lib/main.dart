@@ -5,6 +5,7 @@ import 'package:bintam/views/catalogue_view.dart';
 import 'package:bintam/views/contact_view.dart';
 import 'package:bintam/views/home_view.dart';
 import 'package:bintam/views/orders_view.dart';
+import 'package:bintam/views/phone_auth_view.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -14,6 +15,7 @@ import 'controllers/auth_controller.dart';
 import 'controllers/cart_controller.dart';
 import 'controllers/order_controller.dart';
 import 'controllers/product_controller.dart';
+import 'controllers/user_controller.dart';
 import 'firebase_options.dart';
 
 void main() async {
@@ -55,6 +57,10 @@ class MyApp extends StatelessWidget {
         path: '/auth',
         builder: (context, state) => const AuthView(),
       ),
+      GoRoute(
+        path: '/phone-auth',
+        builder: (context, state) => const PhoneAuthView(),
+      ),
     ],
   );
 
@@ -66,6 +72,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => ProductController()),
         ChangeNotifierProvider(create: (_) => CartController()),
         ChangeNotifierProvider(create: (_) => OrderController()),
+        ChangeNotifierProvider(create: (_) => UserController()),
       ],
       child: MaterialApp.router(
         title: 'BintaM',

@@ -1,10 +1,13 @@
+import 'package:bintam/controllers/user_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 
 import '../controllers/auth_controller.dart';
 import '../controllers/order_controller.dart';
+import '../dao/user_dao.dart';
 import '../models/order_model.dart';
+import '../utils/send_sms_service.dart';
 
 class AdminOrdersTab extends StatefulWidget {
   const AdminOrdersTab({Key? key}) : super(key: key);
@@ -14,6 +17,7 @@ class AdminOrdersTab extends StatefulWidget {
 }
 
 class _AdminOrdersTabState extends State<AdminOrdersTab> with TickerProviderStateMixin {
+  late UserController _userController;
   late OrderController _orderController;
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
@@ -25,7 +29,6 @@ class _AdminOrdersTabState extends State<AdminOrdersTab> with TickerProviderStat
   @override
   void initState() {
     super.initState();
-
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 800),
       vsync: this,
@@ -34,13 +37,14 @@ class _AdminOrdersTabState extends State<AdminOrdersTab> with TickerProviderStat
       CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
     );
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       final auth = context.read<AuthController>();
       if (auth.currentUser != null) {
         _orderController = context.read<OrderController>();
-        _orderController.loadOrders().then((_) {
-          _animationController.forward();
-        });
+        await _orderController.loadOrders();
+        _userController = context.read<UserController>();
+        await _userController.fetchUsers();
+        _animationController.forward();
       }
     });
   }
@@ -151,9 +155,39 @@ class _AdminOrdersTabState extends State<AdminOrdersTab> with TickerProviderStat
     }
   }
 
-  void _sendNotification(String orderId) {
+  Future<void> _sendNotification(String orderId) async {
+    final currentOrder = _orderController.orders.firstWhere((order) => order.id == orderId);
+    final customer = _userController.users.firstWhere((user) => user.id == currentOrder.userId);
+    final customerName = currentOrder.userId == 'visiteur' ? '' : customer.nom;
+    bool? confirmUpdate = await _showConfirmationDialog(
+        'Confirmer l\'envoi du message',
+        'Êtes-vous sûr de vouloir notifier le client que le statut de cette commande est "${_getStatusLabel(currentOrder.status)}"?'
+    );
+    if (confirmUpdate == false) return;
+    // Envoi du message
+    // Générer le message
+    final message = """
+Bonjour $customerName 👋,
+
+Nous vous informons que le statut de votre commande #$orderId a été mis à jour 📦
+
+🆕 Nouveau statut : ${_getStatusLabel(currentOrder.status)}  
+📅 Date : ${DateFormat('dd/MM/yyyy – HH:mm').format(DateTime.now())}
+
+Nous restons à votre disposition pour toute question.
+Merci pour votre confiance 🙏
+""";
+    final smsService = SendSmsService(
+      apiUrl: 'https://kjgqv646d5.execute-api.us-east-1.amazonaws.com/send-sms',
+    );
+    final success = await smsService.sendSms(
+      phoneNumber: currentOrder.telephone,
+      message: message,
+    );
     if (mounted) {
-      _showSnackBar('Notification envoyée pour la commande #$orderId!');
+      _showSnackBar(success ? 'Notification envoyée pour la commande #$orderId!':
+      'Une erreur s\'est produite. L\'envoi du message a échoué!', isError: !success
+      );
     }
   }
 
@@ -787,7 +821,7 @@ class _AdminOrdersTabState extends State<AdminOrdersTab> with TickerProviderStat
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
-                    '${item.sousTotal.toStringAsFixed(2)} \$',
+                    '${item.sousTotal.toStringAsFixed(2)} CFA',
                     style: TextStyle(
                       color: Colors.green.shade700,
                       fontWeight: FontWeight.w600,
@@ -819,7 +853,7 @@ class _AdminOrdersTabState extends State<AdminOrdersTab> with TickerProviderStat
                   ),
                 ),
                 Text(
-                  '${order.montantTotal.toStringAsFixed(2)} \$',
+                  '${order.montantTotal.toStringAsFixed(2)} CFA',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 20,

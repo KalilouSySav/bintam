@@ -59,8 +59,9 @@ class _ImageCarouselState extends State<ImageCarousel> {
               child: _allImages[_currentImageIndex].isNotEmpty
                   ? Hero(
                 tag: widget.heroTag,
-                child: Image.memory(
-                  base64Decode(_allImages[_currentImageIndex]),
+                child: Image.network(
+                  // base64Decode(_allImages[_currentImageIndex]),
+                  _allImages[_currentImageIndex],
                   fit: BoxFit.cover,
                   errorBuilder: (context, error, stackTrace) {
                     return _buildErrorWidget();
@@ -103,8 +104,8 @@ class _ImageCarouselState extends State<ImageCarousel> {
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(6),
                     child: _allImages[index].isNotEmpty
-                        ? Image.memory(
-                      base64Decode(_allImages[index]),
+                        ? Image.network(
+                      _allImages[index],
                       fit: BoxFit.cover,
                       errorBuilder: (context, error, stackTrace) {
                         return Container(
@@ -153,8 +154,8 @@ class _ImageCarouselState extends State<ImageCarousel> {
         child: widget.mainImageUrl.isNotEmpty
             ? Hero(
           tag: widget.heroTag,
-          child: Image.memory(
-            base64Decode(widget.mainImageUrl),
+          child: Image.network(
+            widget.mainImageUrl,
             fit: BoxFit.cover,
             errorBuilder: (context, error, stackTrace) {
               return _buildErrorWidget();
@@ -288,8 +289,8 @@ class _ImageZoomDialogState extends State<ImageZoomDialog> {
                   minScale: 0.8,
                   maxScale: 4.0,
                   child: widget.images[index].isNotEmpty
-                      ? Image.memory(
-                    base64Decode(widget.images[index]),
+                      ? Image.network(
+                    widget.images[index],
                     fit: BoxFit.contain,
                     errorBuilder: (context, error, stackTrace) {
                       return Container(

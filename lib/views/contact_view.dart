@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
@@ -19,161 +20,190 @@ class _ContactViewState extends State<ContactView> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _messageController = TextEditingController();
+  final FocusNode _focusNode = FocusNode();
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    _focusNode.requestFocus();
+  }
 
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final isDesktop = screenWidth >= 1024;
 
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: isDesktop ? 2 : 1,
-        title: isDesktop
-            ? Row(
-          children: [
-            // Logo
-            Image.asset(
-              'images/logo-bintam-1.png',
-              height: 40,
-            ),
-            const SizedBox(width: 12),
-            const Text(
-              'BintaM',
-              style: TextStyle(
-                fontSize: 24,
-                color: Colors.black,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(width: 16),
-
-            // Navigation boutons à gauche
-            NavButton(label: 'Accueil', route: '/'),
-            NavButton(label: 'Catalogue', route: '/catalogue'),
-            NavButton(label: 'Contact', route: '/contact'),
-          ],
-        )
-            : const Text('Contact'),
-        actions: [
-          // Icône panier
-          Consumer<CartController>(
-            builder: (context, cart, child) {
-              return IconButton(
-                icon: Stack(
-                  children: [
-                    const Icon(Icons.shopping_cart),
-                    if (cart.itemCount > 0)
-                      Positioned(
-                        right: 0,
-                        top: 0,
-                        child: Container(
-                          padding: const EdgeInsets.all(2),
-                          decoration: BoxDecoration(
-                            color: Colors.red,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          constraints: const BoxConstraints(
-                            minWidth: 16,
-                            minHeight: 16,
-                          ),
-                          child: Text(
-                            '${cart.itemCount}',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-                onPressed: () => context.go('/cart'),
-              );
-            },
-          ),
-
-          // Menu utilisateur
-          Consumer<AuthController>(
-            builder: (context, auth, child) {
-              return PopupMenuButton<String>(
-                icon: const Icon(Icons.person, color: Colors.black),
-                onSelected: (value) {
-                  switch (value) {
-                    case 'auth':
-                      context.go('/auth');
-                      break;
-                    case 'admin':
-                      context.go('/admin');
-                      break;
-                    case 'orders':
-                      context.go('/orders');
-                      break;
-                    case 'visitor':
-                      auth.setVisitorMode();
-                      break;
-                    case 'logout':
-                      auth.signOut();
-                      break;
-                  }
-                },
-                itemBuilder: (context) {
-                  if (auth.isAuthenticated) {
-                    return [
-                      PopupMenuItem(
-                        value: 'profile',
-                        child: Text('${auth.currentUser?.prenom} ${auth.currentUser?.nom}'),
-                      ),
-                      if (auth.isAdmin)
-                        const PopupMenuItem(
-                          value: 'admin',
-                          child: Text('Administration'),
-                        ),
-                      if(auth.isCust)
-                        const PopupMenuItem(
-                          value: 'orders',
-                          child: Text('Commande'),
-                        ),
-                      const PopupMenuItem(
-                        value: 'logout',
-                        child: Text('Déconnexion'),
-                      ),
-                    ];
-                  } else {
-                    return [
-                      const PopupMenuItem(
-                        value: 'auth',
-                        child: Text('Connexion'),
-                      ),
-                      const PopupMenuItem(
-                        value: 'visitor',
-                        child: Text('Mode Visiteur'),
-                      ),
-                    ];
-                  }
-                },
-              );
-            },
-          ),
-        ],
-        automaticallyImplyLeading: !isDesktop,
-      ),
-      drawer: isDesktop ? null : const AppDrawer(),
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          if (constraints.maxWidth > 600) {
-            return _buildWideLayout();
-          } else {
-            return _buildNarrowLayout();
+    return RawKeyboardListener(
+      focusNode: _focusNode,
+      onKey: (RawKeyEvent event) {
+        if (event is RawKeyDownEvent) {
+          if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+            _scrollController.animateTo(
+              _scrollController.offset + 50,
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.ease,
+            );
+          } else if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+            _scrollController.animateTo(
+              _scrollController.offset - 50,
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.ease,
+            );
           }
-        },
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          elevation: isDesktop ? 2 : 1,
+          title: isDesktop
+              ? Row(
+            children: [
+              Image.asset(
+                'images/logo-bintam-1.png',
+                height: 40,
+              ),
+              const SizedBox(width: 12),
+              const Text(
+                'BintaM',
+                style: TextStyle(
+                  fontSize: 24,
+                  color: Colors.black,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(width: 16),
+              NavButton(label: 'Accueil', route: '/'),
+              NavButton(label: 'Catalogue', route: '/catalogue'),
+              NavButton(label: 'Contact', route: '/contact'),
+            ],
+          )
+              : const Text('Contact'),
+          actions: [
+            Consumer<CartController>(
+              builder: (context, cart, child) {
+                return IconButton(
+                  icon: Stack(
+                    children: [
+                      const Icon(Icons.shopping_cart),
+                      if (cart.itemCount > 0)
+                        Positioned(
+                          right: 0,
+                          top: 0,
+                          child: Container(
+                            padding: const EdgeInsets.all(2),
+                            decoration: BoxDecoration(
+                              color: Colors.red,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            constraints: const BoxConstraints(
+                              minWidth: 16,
+                              minHeight: 16,
+                            ),
+                            child: Text(
+                              '${cart.itemCount}',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  onPressed: () => context.go('/cart'),
+                );
+              },
+            ),
+            Consumer<AuthController>(
+              builder: (context, auth, child) {
+                return PopupMenuButton<String>(
+                  icon: const Icon(Icons.person, color: Colors.black),
+                  onSelected: (value) {
+                    switch (value) {
+                      case 'auth':
+                        context.go('/auth');
+                        break;
+                      case 'admin':
+                        context.go('/admin');
+                        break;
+                      case 'orders':
+                        context.go('/orders');
+                        break;
+                      case 'visitor':
+                        auth.setVisitorMode();
+                        break;
+                      case 'logout':
+                        auth.signOut();
+                        break;
+                    }
+                  },
+                  itemBuilder: (context) {
+                    if (auth.isAuthenticated) {
+                      return [
+                        PopupMenuItem(
+                          value: 'profile',
+                          child: Text(
+                              '${auth.currentUser?.prenom} ${auth.currentUser?.nom}'),
+                        ),
+                        if (auth.isAdmin)
+                          const PopupMenuItem(
+                            value: 'admin',
+                            child: Text('Administration'),
+                          ),
+                        if (auth.isCust)
+                          const PopupMenuItem(
+                            value: 'orders',
+                            child: Text('Commande'),
+                          ),
+                        const PopupMenuItem(
+                          value: 'logout',
+                          child: Text('Déconnexion'),
+                        ),
+                      ];
+                    } else {
+                      return [
+                        const PopupMenuItem(
+                          value: 'auth',
+                          child: Text('Connexion'),
+                        ),
+                        const PopupMenuItem(
+                          value: 'visitor',
+                          child: Text('Mode Visiteur'),
+                        ),
+                      ];
+                    }
+                  },
+                );
+              },
+            ),
+          ],
+          automaticallyImplyLeading: !isDesktop,
+        ),
+        drawer: isDesktop ? null : const AppDrawer(),
+        body: InteractiveViewer(
+          boundaryMargin: const EdgeInsets.all(20),
+          minScale: 0.1,
+          maxScale: 4.0,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              if (constraints.maxWidth > 600) {
+                return _buildWideLayout();
+              } else {
+                return _buildNarrowLayout();
+              }
+            },
+          ),
+        ),
       ),
     );
   }
 
   Widget _buildWideLayout() {
     return CustomScrollView(
+      controller: _scrollController,
       slivers: [
         SliverPadding(
           padding: const EdgeInsets.all(32),
@@ -199,6 +229,7 @@ class _ContactViewState extends State<ContactView> {
 
   Widget _buildNarrowLayout() {
     return SingleChildScrollView(
+      controller: _scrollController,
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -384,6 +415,8 @@ class _ContactViewState extends State<ContactView> {
     _nameController.dispose();
     _emailController.dispose();
     _messageController.dispose();
+    _focusNode.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 }

@@ -5,7 +5,7 @@ import 'package:provider/provider.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/cart_controller.dart';
 import '../controllers/order_controller.dart';
-import '../utils/whatsapp_service.dart';
+import '../utils/send_sms_service.dart';
 
 class CheckoutDialog extends StatefulWidget {
   const CheckoutDialog({Key? key}) : super(key: key);
@@ -95,20 +95,23 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
         final userName = auth.currentUser!.nom ?? 'Client';
 
         // Création commande
-        await orderController.createOrder(
+       final orderId = await orderController.createOrder(
           userId: userId,
           items: cart.items,
           telephone: _telephoneController.text,
         );
 
-        // Création du message WhatsApp
+       // Confirmation link
+        final confirmationLink = "https://kalilousy-savane.ca/#/auth";
+
+        // Création du message texte
         final orderDetails = cart.items.map((item) =>
         "- ${item.nom} x${item.quantite}").join("\n");
 
-        final message = """
+        final messageCustomer = """
 Bonjour $userName 👋,
 
-Merci pour votre commande sur notre boutique Flutter 🚀
+Merci pour votre commande sur notre boutique BintaM 🚀
 
 📦 Détails de la commande :
 $orderDetails
@@ -118,9 +121,33 @@ $orderDetails
 Nous vous contacterons bientôt pour la livraison.
 """;
 
-        // Envoi du message WhatsApp
-        final success = await WhatsAppService.sendMessage(
-          toPhoneNumber: _telephoneController.text,
+        final message = """
+Bonjour,
+
+🛍️ Nouvelle commande reçue sur votre boutique BintaM !
+
+🆔 Commande : $orderId  
+📅 Date : ${DateTime.now().toString()}  
+
+👤 Client : $userName  
+📞 Téléphone : $_telephoneController  
+
+📦 Détails :
+$orderDetails
+
+💰 Total : ${cart.totalAmount.toStringAsFixed(2)} \$
+
+🔗 Veuillez confirmer l’expédition ici : $confirmationLink
+
+Merci de traiter cette commande dans les plus brefs délais.
+""";
+
+        // Envoi du message
+        final smsService = SendSmsService(
+          apiUrl: 'https://kjgqv646d5.execute-api.us-east-1.amazonaws.com/send-sms',
+        );
+        final success = await smsService.sendSms(
+          phoneNumber: _telephoneController.text,
           message: message,
         );
 
@@ -131,7 +158,7 @@ Nous vous contacterons bientôt pour la livraison.
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(success
-                  ? 'Commande passée et message WhatsApp envoyé 🎉'
+                  ? 'Commande passée et message envoyé 🎉'
                   : 'Commande passée, mais message non envoyé 😕'),
               backgroundColor: success ? Colors.green : Colors.orange,
             ),

@@ -14,7 +14,8 @@ class CartItemWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Uint8List imageBytes = base64Decode(item.imageUrl);
+    // final Uint8List imageBytes = base64Decode(item.imageUrl);
+    final String imageUrl = item.imageUrl;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
@@ -26,7 +27,7 @@ class CartItemWidget extends StatelessWidget {
             Row( // Image + Nom + Prix
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildImage(imageBytes),
+                _buildImage(imageUrl),
                 const SizedBox(width: 12),
                 Expanded(child: _buildTitleAndPrice()),
               ],
@@ -38,7 +39,7 @@ class CartItemWidget extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Prix: ${item.sousTotal.toStringAsFixed(2)} \$',
+                  'Prix: ${item.sousTotal.toStringAsFixed(2)} CFA',
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
@@ -58,7 +59,7 @@ class CartItemWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildImage(Uint8List imageBytes) {
+  Widget _buildImage(String imageUrl) {
     return Container(
       width: 80,
       height: 80,
@@ -67,8 +68,8 @@ class CartItemWidget extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
       ),
       child: item.imageUrl.isNotEmpty
-          ? Image.memory(
-        imageBytes,
+          ? Image.network(
+        imageUrl,
         fit: BoxFit.cover,
         errorBuilder: (context, error, stackTrace) {
           return const Icon(Icons.image);
@@ -91,7 +92,7 @@ class CartItemWidget extends StatelessWidget {
         ),
         const SizedBox(height: 6),
         Text(
-          '${item.prix.toStringAsFixed(2)} \$ / unité',
+          '${item.prix.toStringAsFixed(2)} CFA / unité',
           style: TextStyle(
             color: Colors.grey[700],
             fontSize: 14,

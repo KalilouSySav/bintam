@@ -381,7 +381,7 @@ class _AdminProductsTabState extends State<AdminProductsTab>
                                       borderRadius: BorderRadius.circular(6),
                                     ),
                                     child: Text(
-                                      '${product.prix} \$',
+                                      '${product.prix} CFA',
                                       style: TextStyle(
                                         fontSize: 14,
                                         fontWeight: FontWeight.w600,

@@ -173,7 +173,7 @@ class _ProductCardState extends State<ProductCard> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  '${widget.product.prix.toStringAsFixed(2)} \$',
+                                  '${widget.product.prix.toStringAsFixed(2)} CFA',
                                   style: TextStyle(
                                     fontWeight: FontWeight.w800,
                                     fontSize: priceFontSize,
